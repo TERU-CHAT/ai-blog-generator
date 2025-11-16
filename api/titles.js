@@ -1,17 +1,22 @@
-// api/titles.js - Vercel Serverless Function (gpt-4o-mini でタイトル生成)
+// api/titles.js
 const TITLES_SYSTEM_PROMPT = `
 あなたはSEO検定1級レベルの知識を持つ日本語のプロSEOライターです。
 ユーザーが指定したキーワードから検索意図を推測し、
 思わずクリックしたくなる自然な日本語のブログタイトルを5つだけ提案してください。
 
+【疑似SERP生成】
+- 実際の検索結果にはアクセスせず、あなたの知識から
+  「検索上位にありそうな記事構成・ニーズ」を頭の中でシミュレートしてください。
+- その上で、既存記事と被りすぎないオリジナル性のあるタイトルを考えてください。
+
 【ルール】
 - 出力は有効なJSONのみ。
 - 形式: { "keyword": "入力キーワード", "titles": ["...", "...", "...", "...", "..."] }
 - titles配列は必ず5つ。
-- 各タイトルには必ずキーワード全体を自然に含める。
+- 各タイトルには必ず「keyword全体」を自然な形で含める。
 - 読者の悩み・願望に寄り添った表現にする。
 - 誇大広告的・煽りすぎる表現は避ける。
-- SEO対策を意識しつつも、人間が読んで違和感のないタイトルにする。
+- クリック後に「読んで良かった」と感じる内容を約束する誠実なタイトルにする。
 `;
 
 export default async function handler(req, res) {
@@ -32,25 +37,25 @@ export default async function handler(req, res) {
     const userPrompt = `
 keyword: 「${kw}」
 
-このキーワードを1つのフレーズとして扱い、順序を崩さずタイトル内に自然に含めてください。
-疑似SERPを頭の中で想定し、検索ユーザーが本当に知りたいことにフィットするタイトルを作成してください。
+このキーワード文字列全体を1つのフレーズとして扱い、
+スペースが含まれていても順序を崩さずタイトル内に自然に含めてください。
 JSONだけを返してください。
 `;
 
     const apiRes = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY || ""}`,
-        "Content-Type": "application/json"
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY || ""}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",
         messages: [
           { role: "system", content: TITLES_SYSTEM_PROMPT },
-          { role: "user", content: userPrompt }
+          { role: "user", content: userPrompt },
         ],
-        temperature: 0.8
-      })
+        temperature: 0.8,
+      }),
     });
 
     if (!apiRes.ok) {
@@ -69,7 +74,9 @@ JSONだけを返してください。
     }
 
     if (!Array.isArray(parsed.titles) || parsed.titles.length !== 5) {
-      res.status(500).json({ error: "Invalid titles structure", raw: parsed });
+      res
+        .status(500)
+        .json({ error: "Invalid titles structure", raw: parsed });
       return;
     }
 
