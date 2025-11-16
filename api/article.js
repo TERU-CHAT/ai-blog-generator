@@ -1,4 +1,4 @@
-// api/article.js - Vercel Serverless Function (gpt-4o で記事生成＋Markdown/HTML)
+// api/article.js
 const ARTICLE_SYSTEM_PROMPT = `
 あなたはSEO検定1級に合格している超一流の日本語プロライター兼構成プランナーです。
 以下の条件を満たすブログ記事をMarkdownで執筆します。
@@ -77,17 +77,17 @@ ${tn}
     const apiRes = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${process.env.OPENAI_API_KEY || ""}`,
-        "Content-Type": "application/json"
+        Authorization: `Bearer ${process.env.OPENAI_API_KEY || ""}`,
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         model: "gpt-4o",
         messages: [
           { role: "system", content: ARTICLE_SYSTEM_PROMPT },
-          { role: "user", content: userPrompt }
+          { role: "user", content: userPrompt },
         ],
-        temperature: 0.7
-      })
+        temperature: 0.7,
+      }),
     });
 
     if (!apiRes.ok) {
@@ -118,6 +118,7 @@ ${tn}
   }
 }
 
+// --- 簡易 Markdown → HTML 変換（見出し＋段落＋箇条書き） ---
 function markdownToHtml(md) {
   const lines = md.replace(/\r\n/g, "\n").split("\n");
   let html = "";
