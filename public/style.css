@@ -1,0 +1,5 @@
+body {font-family:sans-serif;background:#f5f7fa;padding:20px;}
+.container{max-width:880px;margin:0 auto;background:#fff;padding:30px;border-radius:12px;}
+.input-area{display:flex;gap:10px;margin-bottom:20px;}
+.hidden{display:none;}
+.issues{background:#ffe7e7;padding:15px;margin:20px 0;}

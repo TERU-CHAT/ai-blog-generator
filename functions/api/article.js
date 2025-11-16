@@ -1,0 +1,1 @@
+// functions/api/article.js placeholder, see chat for full implementation
