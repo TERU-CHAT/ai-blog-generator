@@ -20,9 +20,10 @@ function setIssues(messages) {
     return;
   }
   issuesBox.classList.remove("hidden");
-  issuesBox.innerHTML = messages.map(m => `<div>・${m}</div>`).join("");
+  issuesBox.innerHTML = messages.map((m) => `<div>・${m}</div>`).join("");
 }
 
+// -------- タイトル生成 --------
 generateTitlesBtn.addEventListener("click", async () => {
   const keyword = keywordInput.value.trim();
   const tone = toneSelect.value;
@@ -36,7 +37,8 @@ generateTitlesBtn.addEventListener("click", async () => {
   titlesLoading.classList.remove("hidden");
   setIssues([]);
   titlesArea.classList.add("empty");
-  titlesArea.innerHTML = '<p class="placeholder">タイトル候補を生成中です...</p>';
+  titlesArea.innerHTML =
+    '<p class="placeholder">タイトル候補を生成中です...</p>';
   generateArticleBtn.disabled = true;
   selectedTitleInput.value = "";
   markdownOutput.value = "";
@@ -46,21 +48,36 @@ generateTitlesBtn.addEventListener("click", async () => {
     const res = await fetch("/api/titles", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ keyword, tone })
+      body: JSON.stringify({ keyword, tone }),
     });
 
     const text = await res.text();
+
+    if (!res.ok) {
+      console.error("titles API error body:", text);
+      setIssues([
+        "タイトル生成APIへのリクエストでエラーが発生しました。（HTTP " +
+          res.status +
+          "）",
+        "Vercel 上で /api/titles が正しく配置されているか確認してください。",
+      ]);
+      return;
+    }
+
     let data;
     try {
       data = JSON.parse(text);
     } catch (e) {
       console.error("JSON parse error (titles):", text);
-      setIssues(["タイトル生成APIの応答を解析できませんでした。"]);
+      setIssues([
+        "タイトル生成APIの応答をJSONとして解析できませんでした。",
+        "404ページ（The page could not be found）が返っている場合、APIルートの配置を見直してください。",
+      ]);
       return;
     }
 
-    if (!res.ok || data.error) {
-      setIssues([data.error || "タイトル生成APIでエラーが発生しました。"]);
+    if (data.error) {
+      setIssues([data.error]);
       return;
     }
 
@@ -75,6 +92,7 @@ generateTitlesBtn.addEventListener("click", async () => {
     titles.forEach((title, idx) => {
       const card = document.createElement("label");
       card.className = "title-card";
+
       const radio = document.createElement("input");
       radio.type = "radio";
       radio.name = "titleOption";
@@ -99,7 +117,6 @@ generateTitlesBtn.addEventListener("click", async () => {
     selectedTitleInput.value = titles[0];
     generateArticleBtn.disabled = false;
     setIssues([]);
-
   } catch (e) {
     console.error(e);
     setIssues(["ネットワークエラーによりタイトル候補の取得に失敗しました。"]);
@@ -109,6 +126,7 @@ generateTitlesBtn.addEventListener("click", async () => {
   }
 });
 
+// -------- 記事生成 --------
 generateArticleBtn.addEventListener("click", async () => {
   const keyword = keywordInput.value.trim();
   const tone = toneSelect.value;
@@ -131,21 +149,32 @@ generateArticleBtn.addEventListener("click", async () => {
     const res = await fetch("/api/article", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ keyword, tone, title })
+      body: JSON.stringify({ keyword, tone, title }),
     });
 
     const text = await res.text();
+
+    if (!res.ok) {
+      console.error("article API error body:", text);
+      setIssues([
+        "記事生成APIへのリクエストでエラーが発生しました。（HTTP " +
+          res.status +
+          "）",
+      ]);
+      return;
+    }
+
     let data;
     try {
       data = JSON.parse(text);
     } catch (e) {
       console.error("JSON parse error (article):", text);
-      setIssues(["記事生成APIの応答を解析できませんでした。"]);
+      setIssues(["記事生成APIの応答をJSONとして解析できませんでした。"]);
       return;
     }
 
-    if (!res.ok || data.error) {
-      setIssues([data.error || "記事生成APIでエラーが発生しました。"]);
+    if (data.error) {
+      setIssues([data.error]);
       return;
     }
 
@@ -156,7 +185,6 @@ generateArticleBtn.addEventListener("click", async () => {
     } else {
       setIssues([]);
     }
-
   } catch (e) {
     console.error(e);
     setIssues(["ネットワークエラーにより記事生成に失敗しました。"]);
@@ -166,6 +194,7 @@ generateArticleBtn.addEventListener("click", async () => {
   }
 });
 
+// -------- コピー機能 --------
 async function copyToClipboard(text) {
   try {
     await navigator.clipboard.writeText(text);
