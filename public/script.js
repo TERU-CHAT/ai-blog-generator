@@ -5,219 +5,116 @@ const titlesLoading = document.getElementById("titlesLoading");
 const titlesArea = document.getElementById("titlesArea");
 const selectedTitleInput = document.getElementById("selectedTitle");
 const generateArticleBtn = document.getElementById("generateArticleBtn");
-const articleLoading = document.getElementById("articleLoading");
-const issuesBox = document.getElementById("issues");
 const markdownOutput = document.getElementById("markdownOutput");
-const copyMarkdownBtn = document.getElementById("copyMarkdownBtn");
-const copyHtmlBtn = document.getElementById("copyHtmlBtn");
+const articleLoading = document.getElementById("articleLoading");
 
 let latestHtml = "";
 
-function setIssues(messages) {
-  if (!messages || messages.length === 0) {
-    issuesBox.classList.add("hidden");
-    issuesBox.innerHTML = "";
-    return;
-  }
-  issuesBox.classList.remove("hidden");
-  issuesBox.innerHTML = messages.map((m) => `<div>・${m}</div>`).join("");
-}
-
-// -------- タイトル生成 --------
+// ---------------------------------------------------
+// タイトル生成
+// ---------------------------------------------------
 generateTitlesBtn.addEventListener("click", async () => {
   const keyword = keywordInput.value.trim();
   const tone = toneSelect.value;
 
   if (!keyword) {
-    alert("キーワードを入力してください。");
+    alert("キーワードを入力してください");
     return;
   }
 
-  generateTitlesBtn.disabled = true;
   titlesLoading.classList.remove("hidden");
-  setIssues([]);
-  titlesArea.classList.add("empty");
-  titlesArea.innerHTML =
-    '<p class="placeholder">タイトル候補を生成中です...</p>';
-  generateArticleBtn.disabled = true;
-  selectedTitleInput.value = "";
-  markdownOutput.value = "";
-  latestHtml = "";
+  titlesArea.innerHTML = "<p>生成中...</p>";
 
   try {
     const res = await fetch("/api/titles", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ keyword, tone }),
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ keyword, tone })
     });
 
-    const text = await res.text();
+    if (!res.ok) throw new Error("APIエラー（titles）");
 
-    if (!res.ok) {
-      console.error("titles API error body:", text);
-      setIssues([
-        "タイトル生成APIへのリクエストでエラーが発生しました。（HTTP " +
-          res.status +
-          "）",
-        "Vercel 上で /api/titles が正しく配置されているか確認してください。",
-      ]);
-      return;
-    }
+    const text = await res.text();
 
     let data;
     try {
       data = JSON.parse(text);
-    } catch (e) {
-      console.error("JSON parse error (titles):", text);
-      setIssues([
-        "タイトル生成APIの応答をJSONとして解析できませんでした。",
-        "404ページ（The page could not be found）が返っている場合、APIルートの配置を見直してください。",
-      ]);
-      return;
+    } catch {
+      throw new Error("JSON解析に失敗（HTMLが返ってきた可能性）");
     }
 
-    if (data.error) {
-      setIssues([data.error]);
-      return;
-    }
+    if (!data.titles) throw new Error("タイトル配列がありません");
 
-    const titles = Array.isArray(data.titles) ? data.titles : [];
-    if (titles.length === 0) {
-      setIssues(["タイトル候補が取得できませんでした。"]);
-      return;
-    }
-
-    titlesArea.classList.remove("empty");
     titlesArea.innerHTML = "";
-    titles.forEach((title, idx) => {
-      const card = document.createElement("label");
-      card.className = "title-card";
-
-      const radio = document.createElement("input");
-      radio.type = "radio";
-      radio.name = "titleOption";
-      radio.className = "title-radio";
-      radio.value = title;
-      if (idx === 0) radio.checked = true;
-
-      const span = document.createElement("div");
-      span.className = "title-text";
-      span.textContent = title;
-
-      card.appendChild(radio);
-      card.appendChild(span);
-      titlesArea.appendChild(card);
-
-      card.addEventListener("click", () => {
-        selectedTitleInput.value = title;
+    data.titles.forEach(t => {
+      const btn = document.createElement("button");
+      btn.textContent = t;
+      btn.className = "title-card";
+      btn.onclick = () => {
+        selectedTitleInput.value = t;
         generateArticleBtn.disabled = false;
-      });
+      };
+      titlesArea.appendChild(btn);
     });
 
-    selectedTitleInput.value = titles[0];
-    generateArticleBtn.disabled = false;
-    setIssues([]);
-  } catch (e) {
-    console.error(e);
-    setIssues(["ネットワークエラーによりタイトル候補の取得に失敗しました。"]);
-  } finally {
-    titlesLoading.classList.add("hidden");
-    generateTitlesBtn.disabled = false;
+  } catch (err) {
+    titlesArea.innerHTML = `<p style="color:red">${err.message}</p>`;
   }
+
+  titlesLoading.classList.add("hidden");
 });
 
-// -------- 記事生成 --------
+// ---------------------------------------------------
+// 記事生成
+// ---------------------------------------------------
 generateArticleBtn.addEventListener("click", async () => {
   const keyword = keywordInput.value.trim();
   const tone = toneSelect.value;
   const title = selectedTitleInput.value.trim();
 
-  if (!keyword) {
-    alert("キーワードを入力してください。");
-    return;
-  }
-  if (!title) {
-    alert("使用するブログタイトルを入力してください。");
+  if (!keyword || !title) {
+    alert("キーワードとタイトルが必要です");
     return;
   }
 
-  generateArticleBtn.disabled = true;
   articleLoading.classList.remove("hidden");
-  setIssues([]);
 
   try {
     const res = await fetch("/api/article", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ keyword, tone, title }),
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ keyword, tone, title })
     });
 
+    if (!res.ok) throw new Error("APIエラー（article）");
+
     const text = await res.text();
-
-    if (!res.ok) {
-      console.error("article API error body:", text);
-      setIssues([
-        "記事生成APIへのリクエストでエラーが発生しました。（HTTP " +
-          res.status +
-          "）",
-      ]);
-      return;
-    }
-
     let data;
     try {
       data = JSON.parse(text);
-    } catch (e) {
-      console.error("JSON parse error (article):", text);
-      setIssues(["記事生成APIの応答をJSONとして解析できませんでした。"]);
-      return;
-    }
-
-    if (data.error) {
-      setIssues([data.error]);
-      return;
+    } catch {
+      throw new Error("JSON解析に失敗（HTMLが返ってきた可能性）");
     }
 
     markdownOutput.value = data.markdown || "";
     latestHtml = data.html || "";
-    if (!markdownOutput.value) {
-      setIssues(["Markdown形式の記事が生成されませんでした。"]);
-    } else {
-      setIssues([]);
-    }
-  } catch (e) {
-    console.error(e);
-    setIssues(["ネットワークエラーにより記事生成に失敗しました。"]);
-  } finally {
-    articleLoading.classList.add("hidden");
-    generateArticleBtn.disabled = false;
+
+  } catch (err) {
+    markdownOutput.value = `エラー: ${err.message}`;
   }
+
+  articleLoading.classList.add("hidden");
 });
 
-// -------- コピー機能 --------
-async function copyToClipboard(text) {
-  try {
-    await navigator.clipboard.writeText(text);
-    alert("クリップボードにコピーしました。");
-  } catch (e) {
-    console.error(e);
-    alert("コピーに失敗しました。テキストを手動で選択してください。");
-  }
-}
+// ---------------------------------------------------
+// コピー
+// ---------------------------------------------------
+document.getElementById("copyMarkdownBtn").onclick = () => {
+  navigator.clipboard.writeText(markdownOutput.value);
+  alert("Markdownをコピーしました");
+};
 
-copyMarkdownBtn.addEventListener("click", () => {
-  const text = markdownOutput.value;
-  if (!text) {
-    alert("コピーするMarkdownがありません。");
-    return;
-  }
-  copyToClipboard(text);
-});
-
-copyHtmlBtn.addEventListener("click", () => {
-  if (!latestHtml) {
-    alert("コピーするHTMLがありません。まず記事を生成してください。");
-    return;
-  }
-  copyToClipboard(latestHtml);
-});
+document.getElementById("copyHtmlBtn").onclick = () => {
+  navigator.clipboard.writeText(latestHtml);
+  alert("HTMLをコピーしました");
+};
