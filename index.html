@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>TERU AI Blog Generator（SEO Expert）</title>
+  <title>TERU AI Blog Generator</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="stylesheet" href="/style.css" />
 </head>
@@ -10,86 +10,55 @@
   <div class="app">
     <header class="header">
       <h1>TERU AI Blog Generator</h1>
-      <p class="tagline">SEO検定１級レベルの構成とライティングをAIで全自動生成</p>
+      <p class="tagline">SEO検定1級ライター品質のAI記事作成ツール</p>
     </header>
 
     <main class="main">
-      <!-- STEP1 -->
       <section class="panel">
-        <h2 class="panel-title">1. キーワードと文体を入力</h2>
+        <h2 class="panel-title">1. キーワード入力</h2>
+
         <div class="field">
-          <label for="keyword">キーワード（スペース区切りOK）</label>
-          <input id="keyword" type="text" placeholder="例）ダイエット 食事 糖質制限" />
+          <label>キーワード（スペース区切りOK）</label>
+          <input id="keyword" type="text" placeholder="例）ダイエット 食事 糖質制限">
         </div>
 
         <div class="field">
-          <label for="tone">文体（語尾バリエーション）</label>
+          <label>文体（Tone）</label>
           <select id="tone">
-            <option value="polite">丁寧でニュートラル</option>
-            <option value="feminine">柔らかくやさしい女性的</option>
-            <option value="masculine">落ち着いて少し力強い男性的</option>
-            <option value="expert">専門家が論理的に解説</option>
-            <option value="friendly">読者に語りかけるフレンドリー</option>
+            <option value="polite">丁寧・ニュートラル</option>
+            <option value="feminine">優しい女性的</option>
+            <option value="masculine">力強い男性的</option>
+            <option value="expert">専門家トーン</option>
+            <option value="friendly">会話的でフレンドリー</option>
           </select>
         </div>
 
-        <button id="generateTitlesBtn" class="btn primary">
-          タイトル候補を生成（gpt-4o-mini）
-        </button>
-        <div id="titlesLoading" class="loading hidden">
-          タイトル候補を生成中です...
-        </div>
+        <button id="generateTitlesBtn" class="btn primary">タイトル生成</button>
+        <div id="titlesLoading" class="loading hidden">生成中...</div>
       </section>
 
-      <!-- STEP2 -->
       <section class="panel">
-        <h2 class="panel-title">2. タイトルを選択・編集</h2>
+        <h2 class="panel-title">2. タイトル選択</h2>
+
         <div id="titlesArea" class="titles-area empty">
-          <p class="placeholder">
-            まずは「タイトル候補を生成」ボタンを押してください。
-          </p>
+          <p class="placeholder">まだタイトルがありません</p>
         </div>
 
-        <div class="field">
-          <label for="selectedTitle">
-            最終的なブログタイトル（自由に加筆・修正可）
-          </label>
-          <input
-            id="selectedTitle"
-            type="text"
-            placeholder="ここに選択したタイトルが入ります"
-          />
-        </div>
+        <input id="selectedTitle" placeholder="選択したタイトルが入ります">
+        <button id="generateArticleBtn" disabled class="btn secondary">記事生成</button>
 
-        <button id="generateArticleBtn" class="btn secondary" disabled>
-          この記事を生成（gpt-4o）
-        </button>
-        <div id="articleLoading" class="loading hidden">
-          記事を生成中です。少しお待ちください...
-        </div>
+        <div id="articleLoading" class="loading hidden">生成中...</div>
       </section>
 
-      <!-- STEP3 -->
       <section class="panel">
-        <h2 class="panel-title">3. 生成結果（Markdown）</h2>
-
-        <div id="issues" class="issues hidden"></div>
+        <h2 class="panel-title">3. 結果</h2>
 
         <div class="copy-toolbar">
-          <button id="copyMarkdownBtn" class="btn small">
-            Markdown形式をコピー
-          </button>
-          <button id="copyHtmlBtn" class="btn small outline">
-            HTML形式をコピー
-          </button>
+          <button id="copyMarkdownBtn" class="btn small">Markdownコピー</button>
+          <button id="copyHtmlBtn" class="btn small outline">HTMLコピー</button>
         </div>
 
-        <textarea
-          id="markdownOutput"
-          class="markdown-output"
-          placeholder="ここに生成されたMarkdown形式の記事が表示されます。"
-          readonly
-        ></textarea>
+        <textarea id="markdownOutput" class="markdown-output" readonly></textarea>
       </section>
     </main>
   </div>
