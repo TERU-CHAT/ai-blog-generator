@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <title>TERU AI Blog Generator（SEO Expert）</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="/public/style.css" />
+  <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
   <div class="app">
@@ -14,6 +14,7 @@
     </header>
 
     <main class="main">
+      <!-- STEP1 -->
       <section class="panel">
         <h2 class="panel-title">1. キーワードと文体を入力</h2>
         <div class="field">
@@ -32,40 +33,67 @@
           </select>
         </div>
 
-        <button id="generateTitlesBtn" class="btn primary">タイトル候補を生成（gpt-4o-mini）</button>
-        <div id="titlesLoading" class="loading hidden">タイトル候補を生成中です...</div>
+        <button id="generateTitlesBtn" class="btn primary">
+          タイトル候補を生成（gpt-4o-mini）
+        </button>
+        <div id="titlesLoading" class="loading hidden">
+          タイトル候補を生成中です...
+        </div>
       </section>
 
+      <!-- STEP2 -->
       <section class="panel">
         <h2 class="panel-title">2. タイトルを選択・編集</h2>
         <div id="titlesArea" class="titles-area empty">
-          <p class="placeholder">まずは「タイトル候補を生成」ボタンを押してください。</p>
+          <p class="placeholder">
+            まずは「タイトル候補を生成」ボタンを押してください。
+          </p>
         </div>
 
         <div class="field">
-          <label for="selectedTitle">最終的なブログタイトル（自由に加筆・修正可）</label>
-          <input id="selectedTitle" type="text" placeholder="ここに選択したタイトルが入ります" />
+          <label for="selectedTitle">
+            最終的なブログタイトル（自由に加筆・修正可）
+          </label>
+          <input
+            id="selectedTitle"
+            type="text"
+            placeholder="ここに選択したタイトルが入ります"
+          />
         </div>
 
-        <button id="generateArticleBtn" class="btn secondary" disabled>この記事を生成（gpt-4o）</button>
-        <div id="articleLoading" class="loading hidden">記事を生成中です。少しお待ちください...</div>
+        <button id="generateArticleBtn" class="btn secondary" disabled>
+          この記事を生成（gpt-4o）
+        </button>
+        <div id="articleLoading" class="loading hidden">
+          記事を生成中です。少しお待ちください...
+        </div>
       </section>
 
+      <!-- STEP3 -->
       <section class="panel">
         <h2 class="panel-title">3. 生成結果（Markdown）</h2>
 
         <div id="issues" class="issues hidden"></div>
 
         <div class="copy-toolbar">
-          <button id="copyMarkdownBtn" class="btn small">Markdown形式をコピー</button>
-          <button id="copyHtmlBtn" class="btn small outline">HTML形式をコピー</button>
+          <button id="copyMarkdownBtn" class="btn small">
+            Markdown形式をコピー
+          </button>
+          <button id="copyHtmlBtn" class="btn small outline">
+            HTML形式をコピー
+          </button>
         </div>
 
-        <textarea id="markdownOutput" class="markdown-output" placeholder="ここに生成されたMarkdown形式の記事が表示されます。" readonly></textarea>
+        <textarea
+          id="markdownOutput"
+          class="markdown-output"
+          placeholder="ここに生成されたMarkdown形式の記事が表示されます。"
+          readonly
+        ></textarea>
       </section>
     </main>
   </div>
 
-  <script src="/public/script.js"></script>
+  <script src="/script.js"></script>
 </body>
 </html>
