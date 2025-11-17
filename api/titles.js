@@ -1,7 +1,3 @@
-export const config = {
-  runtime: 'nodejs'
-};
-
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -20,13 +16,14 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: "gpt-4o-mini",
         messages: [
-          { role: "system", content: "ブログタイトル生成" },
+          { role: "system", content: "SEOタイトル生成AI" },
           { role: "user", content: `キーワード: ${keyword}` }
         ]
       }),
     });
 
     const data = await apiRes.json();
+
     const parsed = JSON.parse(data.choices?.[0]?.message?.content || "{}");
 
     return res.status(200).json({
