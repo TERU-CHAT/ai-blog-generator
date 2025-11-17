@@ -4,8 +4,9 @@
   <meta charset="UTF-8" />
   <title>TERU AI Blog Generator</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <!-- ★ 修正：public を明示 -->
-  <link rel="stylesheet" href="/public/style.css" />
+
+  <!-- public フォルダはルートにマップされるため /style.css が正しい -->
+  <link rel="stylesheet" href="/style.css" />
 </head>
 <body>
   <div class="app">
@@ -53,7 +54,9 @@
 
       <section class="panel">
         <h2 class="panel-title">3. 結果</h2>
-  <div id="issues" class="issues hidden"></div>
+
+        <div id="issues" class="issues hidden"></div>
+
         <div class="copy-toolbar">
           <button id="copyMarkdownBtn" class="btn small">Markdownコピー</button>
           <button id="copyHtmlBtn" class="btn small outline">HTMLコピー</button>
@@ -64,7 +67,7 @@
     </main>
   </div>
 
-  
-  <script src="/public/script.js"></script>
+  <!-- 修正：public フォルダはルートとして展開されるので /script.js が正しい -->
+  <script src="/script.js"></script>
 </body>
 </html>
