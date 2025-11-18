@@ -17,7 +17,7 @@ export default async function handler(req, res) {
         model: "gpt-4o-mini",
         messages: [
           { role: "system", content: "ブログタイトル生成" },
-          { role: "user", content: `キーワード:${keyword}` }
+          { role: "user", content: `キーワード: ${keyword}` }
         ]
       }),
     });
@@ -28,6 +28,6 @@ export default async function handler(req, res) {
     return res.status(200).json({ titles: parsed.titles || [] });
 
   } catch (e) {
-    res.status(500).json({ error: e.message });
+    return res.status(500).json({ error: e.message });
   }
 }
