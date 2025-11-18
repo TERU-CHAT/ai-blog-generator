@@ -13,39 +13,45 @@ const copyHtmlBtn = document.getElementById("copyHtmlBtn");
 
 let latestHtml = "";
 
+// ---------- JSON 安全解析 ----------
 function safeJSON(text) {
   try {
     return JSON.parse(text);
-  } catch (_) {
+  } catch (e) {
+    console.error("JSON parse error:", text);
     return null;
   }
 }
 
-function setIssues(msgs) {
-  if (!msgs || msgs.length === 0) {
+// ---------- エラー表示 ----------
+function setIssues(messages) {
+  if (!issuesBox) return;   // ← ← ← ★ 重要バグ修正ポイント
+
+  if (!messages || messages.length === 0) {
     issuesBox.classList.add("hidden");
     issuesBox.innerHTML = "";
     return;
   }
   issuesBox.classList.remove("hidden");
-  issuesBox.innerHTML = msgs.map(m => `<div>・${m}</div>`).join("");
+  issuesBox.innerHTML = messages.map(m => `<div>・${m}</div>`).join("");
 }
 
+// ---------- タイトル生成 ----------
 generateTitlesBtn.addEventListener("click", async () => {
   const keyword = keywordInput.value.trim();
   const tone = toneSelect.value;
 
-  if (!keyword) return alert("キーワードを入力してください");
+  if (!keyword) return alert("キーワードを入力してください。");
 
   generateTitlesBtn.disabled = true;
   titlesLoading.classList.remove("hidden");
   setIssues([]);
 
   try {
-    const res = await fetch("/api/titles", {
+    const res = await fetch("./api/titles", {
       method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({ keyword, tone })
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ keyword, tone }),
     });
 
     const text = await res.text();
@@ -55,68 +61,79 @@ generateTitlesBtn.addEventListener("click", async () => {
     if (data.error) return setIssues([data.error]);
 
     const titles = data.titles || [];
+    if (titles.length === 0) return setIssues(["タイトル候補がありません"]);
+
+    titlesArea.classList.remove("empty");
     titlesArea.innerHTML = "";
 
-    titles.forEach(t => {
-      const card = document.createElement("div");
+    titles.forEach((title) => {
+      const card = document.createElement("label");
       card.className = "title-card";
-      card.textContent = t;
+      card.innerHTML = `
+        <input type="radio" name="titleOption" class="title-radio" value="${title}">
+        <div class="title-text">${title}</div>
+      `;
       card.addEventListener("click", () => {
-        selectedTitleInput.value = t;
+        selectedTitleInput.value = title;
         generateArticleBtn.disabled = false;
       });
       titlesArea.appendChild(card);
     });
 
-  } catch (_) {
-    setIssues(["通信エラー"]);
+  } catch (e) {
+    setIssues(["通信エラーが発生しました"]);
   } finally {
     titlesLoading.classList.add("hidden");
     generateTitlesBtn.disabled = false;
   }
 });
 
+// ---------- 記事生成 ----------
 generateArticleBtn.addEventListener("click", async () => {
   const keyword = keywordInput.value.trim();
   const tone = toneSelect.value;
   const title = selectedTitleInput.value.trim();
 
-  if (!keyword || !title) return alert("キーワードまたはタイトルが不足しています");
+  if (!keyword) return alert("キーワードがありません");
+  if (!title) return alert("タイトルがありません");
 
   generateArticleBtn.disabled = true;
   articleLoading.classList.remove("hidden");
   setIssues([]);
 
   try {
-    const res = await fetch("/api/article", {
+    const res = await fetch("./api/article", {
       method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({ keyword, tone, title })
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ keyword, tone, title }),
     });
 
     const text = await res.text();
     const data = safeJSON(text);
 
-    if (!data) return setIssues(["API 応答が不正です"]);
+    if (!data) return setIssues(["API 応答が不正です（JSONではありません）"]);
     if (data.error) return setIssues([data.error]);
 
-    markdownOutput.value = data.markdown;
-    latestHtml = data.html;
+    markdownOutput.value = data.markdown || "";
+    latestHtml = data.html || "";
 
-  } catch (_) {
-    setIssues(["通信エラー"]);
+  } catch (e) {
+    setIssues(["通信エラーが発生しました"]);
   } finally {
     articleLoading.classList.add("hidden");
     generateArticleBtn.disabled = false;
   }
 });
 
+// ---------- コピー ----------
 copyMarkdownBtn.addEventListener("click", () => {
-  navigator.clipboard.writeText(markdownOutput.value || "");
-  alert("Markdownをコピーしました");
+  if (!markdownOutput.value)
+    return alert("コピーするMarkdownがありません");
+  navigator.clipboard.writeText(markdownOutput.value);
 });
 
 copyHtmlBtn.addEventListener("click", () => {
-  navigator.clipboard.writeText(latestHtml || "");
-  alert("HTMLをコピーしました");
+  if (!latestHtml)
+    return alert("コピーするHTMLがありません");
+  navigator.clipboard.writeText(latestHtml);
 });
