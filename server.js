@@ -3,14 +3,17 @@ import fetch from "node-fetch";
 import path from "path";
 import { fileURLToPath } from "url";
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 const app = express();
 app.use(express.json());
-app.use(express.static(__dirname)); // index.html, script.js などを配信
 
-// ---- タイトル生成 API ----------------------------
+// 静的ファイルを配信
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+app.use(express.static(__dirname));
+
+// =========================
+// 1. タイトル生成 API
+// =========================
 app.post("/api/titles", async (req, res) => {
   const { keyword } = req.body || {};
   if (!keyword) return res.status(400).json({ error: "keyword is empty" });
@@ -25,25 +28,31 @@ app.post("/api/titles", async (req, res) => {
       body: JSON.stringify({
         model: "gpt-4o-mini",
         messages: [
-          { role: "system", content: "ブログタイトル生成（5件）" },
+          { role: "system", content: "キーワードから自然なタイトルを5つ生成するAIです。" },
           { role: "user", content: `キーワード: ${keyword}` }
         ]
       }),
     });
 
     const data = await apiRes.json();
-    const parsed = JSON.parse(data.choices?.[0]?.message?.content || "{}");
 
-    return res.json({
-      titles: parsed.titles || []
-    });
+    let parsed = {};
+    try {
+      parsed = JSON.parse(data.choices?.[0]?.message?.content || "{}");
+    } catch {
+      return res.status(500).json({ error: "Failed to parse titles" });
+    }
+
+    res.json({ titles: parsed.titles || [] });
 
   } catch (e) {
-    return res.status(500).json({ error: e.message });
+    res.status(500).json({ error: e.message });
   }
 });
 
-// ---- 記事生成 API ----------------------------
+// =========================
+// 2. 記事生成 API
+// =========================
 app.post("/api/article", async (req, res) => {
   const { keyword, tone, title } = req.body || {};
   if (!keyword || !title)
@@ -59,17 +68,20 @@ app.post("/api/article", async (req, res) => {
       body: JSON.stringify({
         model: "gpt-4o",
         messages: [
-          { role: "system", content: "SEO記事生成" },
-          {
-            role: "user",
-            content: `キーワード:${keyword}\nタイトル:${title}\nTone:${tone}`
-          }
+          { role: "system", content: "SEO記事をMarkdownで生成するAIです。" },
+          { role: "user", content: `キーワード: ${keyword}\nタイトル: ${title}\nTone: ${tone}` }
         ]
       }),
     });
 
     const data = await apiRes.json();
-    const parsed = JSON.parse(data.choices?.[0]?.message?.content || "{}");
+
+    let parsed = {};
+    try {
+      parsed = JSON.parse(data.choices?.[0]?.message?.content || "{}");
+    } catch {
+      return res.status(500).json({ error: "Failed to parse article" });
+    }
 
     res.json({
       markdown: parsed.markdown || "",
@@ -81,8 +93,8 @@ app.post("/api/article", async (req, res) => {
   }
 });
 
-// ---- サーバー起動 ----------------------------
+// Render のポートで起動
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log("Server started on port", PORT);
+  console.log(`Server is running on port ${PORT}`);
 });
