@@ -17,7 +17,13 @@ export default async function handler(req, res) {
         model: "gpt-4o",
         messages: [
           { role: "system", content: "SEO記事生成" },
-          { role: "user", content: `キーワード:${keyword}\nタイトル:${title}\nTone:${tone}` }
+          {
+            role: "user",
+            content:
+`キーワード:${keyword}
+タイトル:${title}
+Tone:${tone}`
+          },
         ]
       }),
     });
