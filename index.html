@@ -10,15 +10,16 @@
   <div class="app">
     <header class="header">
       <h1>TERU AI Blog Generator</h1>
-      <p class="tagline">SEO検定1級ライター品質のAI記事作成ツール</p>
+      <p class="tagline">SEO検定1級レベルのAI記事生成ツール</p>
     </header>
 
     <main class="main">
       <section class="panel">
         <h2 class="panel-title">1. キーワード入力</h2>
+
         <div class="field">
           <label>キーワード（スペース区切りOK）</label>
-          <input id="keyword" type="text" placeholder="例）ダイエット 食事 糖質制限">
+          <input id="keyword" type="text" placeholder="例：ダイエット 食事 糖質制限">
         </div>
 
         <div class="field">
@@ -38,12 +39,14 @@
 
       <section class="panel">
         <h2 class="panel-title">2. タイトル選択</h2>
+
         <div id="titlesArea" class="titles-area empty">
           <p class="placeholder">まだタイトルがありません</p>
         </div>
 
         <input id="selectedTitle" placeholder="選択したタイトルが入ります">
         <button id="generateArticleBtn" disabled class="btn secondary">記事生成</button>
+
         <div id="articleLoading" class="loading hidden">生成中...</div>
       </section>
 
