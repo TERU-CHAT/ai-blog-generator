@@ -7,7 +7,7 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "keyword/title missing" });
 
   try {
-    const apiRes = await fetch("https://api.openai.com/v1/chat/completions", {
+    const openaiRes = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${process.env.OPENAI_API_KEY}`,
@@ -16,22 +16,22 @@ export default async function handler(req, res) {
       body: JSON.stringify({
         model: "gpt-4o",
         messages: [
-          { role: "system", content: "SEO記事生成AI" },
+          { role: "system", content: "SEO記事生成" },
           {
             role: "user",
             content: `キーワード:${keyword}\nタイトル:${title}\nTone:${tone}`
           }
-        ]
+        ],
       }),
     });
 
-    const data = await apiRes.json();
+    const data = await openaiRes.json();
 
-    const parsed = JSON.parse(data.choices?.[0]?.message?.content || "{}");
+    const obj = JSON.parse(data.choices?.[0]?.message?.content || "{}");
 
     res.status(200).json({
-      markdown: parsed.markdown || "",
-      html: parsed.html || ""
+      markdown: obj.markdown || "",
+      html: obj.html || ""
     });
 
   } catch (e) {
