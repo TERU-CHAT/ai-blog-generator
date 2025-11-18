@@ -13,26 +13,24 @@ const copyHtmlBtn = document.getElementById("copyHtmlBtn");
 
 let latestHtml = "";
 
-// ---------- 共通 ----------
 function safeJSON(text) {
   try {
     return JSON.parse(text);
-  } catch (e) {
+  } catch (_) {
     return null;
   }
 }
 
-function setIssues(messages = []) {
-  if (messages.length === 0) {
+function setIssues(msgs) {
+  if (!msgs || msgs.length === 0) {
     issuesBox.classList.add("hidden");
     issuesBox.innerHTML = "";
     return;
   }
   issuesBox.classList.remove("hidden");
-  issuesBox.innerHTML = messages.map(m => `<div>・${m}</div>`).join("");
+  issuesBox.innerHTML = msgs.map(m => `<div>・${m}</div>`).join("");
 }
 
-// ---------- タイトル生成 ----------
 generateTitlesBtn.addEventListener("click", async () => {
   const keyword = keywordInput.value.trim();
   const tone = toneSelect.value;
@@ -46,44 +44,31 @@ generateTitlesBtn.addEventListener("click", async () => {
   try {
     const res = await fetch("/api/titles", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ keyword, tone }),
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ keyword, tone })
     });
 
-    const txt = await res.text();
-    const data = safeJSON(txt);
+    const text = await res.text();
+    const data = safeJSON(text);
 
-    if (!data) return setIssues(["API応答がJSONではありません"]);
-
-    if (data.error) {
-      setIssues([data.error]);
-      return;
-    }
+    if (!data) return setIssues(["API 応答が不正です（JSONではありません）"]);
+    if (data.error) return setIssues([data.error]);
 
     const titles = data.titles || [];
-    if (titles.length === 0) return setIssues(["タイトル候補なし"]);
-
-    titlesArea.classList.remove("empty");
     titlesArea.innerHTML = "";
 
-    titles.forEach((title) => {
-      const card = document.createElement("label");
+    titles.forEach(t => {
+      const card = document.createElement("div");
       card.className = "title-card";
-      card.innerHTML = `
-        <input type="radio" name="titleOption" class="title-radio" value="${title}">
-        <div class="title-text">${title}</div>
-      `;
+      card.textContent = t;
       card.addEventListener("click", () => {
-        selectedTitleInput.value = title;
+        selectedTitleInput.value = t;
         generateArticleBtn.disabled = false;
       });
       titlesArea.appendChild(card);
     });
 
-    selectedTitleInput.value = titles[0];
-    generateArticleBtn.disabled = false;
-
-  } catch (e) {
+  } catch (_) {
     setIssues(["通信エラー"]);
   } finally {
     titlesLoading.classList.add("hidden");
@@ -91,13 +76,12 @@ generateTitlesBtn.addEventListener("click", async () => {
   }
 });
 
-// ---------- 記事生成 ----------
 generateArticleBtn.addEventListener("click", async () => {
   const keyword = keywordInput.value.trim();
   const tone = toneSelect.value;
   const title = selectedTitleInput.value.trim();
 
-  if (!keyword || !title) return alert("キーワード/タイトル不足");
+  if (!keyword || !title) return alert("キーワードまたはタイトルが不足しています");
 
   generateArticleBtn.disabled = true;
   articleLoading.classList.remove("hidden");
@@ -106,20 +90,20 @@ generateArticleBtn.addEventListener("click", async () => {
   try {
     const res = await fetch("/api/article", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ keyword, tone, title }),
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ keyword, tone, title })
     });
 
-    const txt = await res.text();
-    const data = safeJSON(txt);
+    const text = await res.text();
+    const data = safeJSON(text);
 
-    if (!data) return setIssues(["API応答がJSONではありません"]);
+    if (!data) return setIssues(["API 応答が不正です"]);
     if (data.error) return setIssues([data.error]);
 
-    markdownOutput.value = data.markdown || "";
-    latestHtml = data.html || "";
+    markdownOutput.value = data.markdown;
+    latestHtml = data.html;
 
-  } catch (e) {
+  } catch (_) {
     setIssues(["通信エラー"]);
   } finally {
     articleLoading.classList.add("hidden");
@@ -127,13 +111,12 @@ generateArticleBtn.addEventListener("click", async () => {
   }
 });
 
-// ---------- コピー ----------
 copyMarkdownBtn.addEventListener("click", () => {
   navigator.clipboard.writeText(markdownOutput.value || "");
-  alert("Markdownコピー完了");
+  alert("Markdownをコピーしました");
 });
 
 copyHtmlBtn.addEventListener("click", () => {
   navigator.clipboard.writeText(latestHtml || "");
-  alert("HTMLコピー完了");
+  alert("HTMLをコピーしました");
 });
