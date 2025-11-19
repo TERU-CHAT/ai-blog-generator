@@ -1,30 +1,42 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>TERU AI Blog Generator</title>
-
-  <!-- Google Fonts（CSP対応済み） -->
-  <link
-    href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&display=swap"
-    rel="stylesheet"
-  />
-
-  <link rel="stylesheet" href="style.css" />
+  <meta charset="UTF-8">
+  <title>SEO Blog Generator Pro</title>
+  <link rel="stylesheet" href="style.css">
 </head>
-
 <body>
-  <div class="container">
-    <h1>TERU AI Blog Generator（SEO Expert）</h1>
+  <div class="wrap">
 
-    <div class="input-area">
-      <input id="keyword" type="text" placeholder="キーワードを入力" />
-      <button id="generateBtn">タイトル生成</button>
+    <h1>SEO Blog Generator（タイトル＋本文生成）</h1>
+
+    <!-- キーワード入力 -->
+    <div class="box">
+      <h2>① キーワードを入力（空白区切り OK）</h2>
+      <input id="keyword" placeholder="例：脱毛 医療 料金 比較">
+      <button id="btn-generate-titles">タイトルを生成</button>
     </div>
 
-    <h2>生成されたブログタイトル</h2>
-    <ul id="result"></ul>
+    <!-- タイトル候補 -->
+    <div class="box">
+      <h2>② タイトル候補を選択</h2>
+      <div id="titles"></div>
+
+      <h3>（編集可能）</h3>
+      <input id="selectedTitle" placeholder="選択または編集したタイトル">
+    </div>
+
+    <!-- 本文生成 -->
+    <div class="box">
+      <h2>③ ブログ本文を生成</h2>
+      <button id="btn-generate-article">本文を生成</button>
+    </div>
+
+    <div class="box">
+      <h2>④ 生成された記事</h2>
+      <textarea id="article" rows="30"></textarea>
+    </div>
+
   </div>
 
   <script src="script.js"></script>
