@@ -1,36 +1,42 @@
-document.getElementById("generateBtn").addEventListener("click", async () => {
-  const keyword = document.getElementById("keyword").value;
-  const resultArea = document.getElementById("result");
-  resultArea.innerHTML = "";
+// タイトル生成
+document.getElementById("btn-generate-titles").addEventListener("click", async () => {
+  const keyword = document.getElementById("keyword").value.trim();
+  if (!keyword) return alert("キーワードを入力してください");
 
-  if (!keyword.trim()) {
-    alert("キーワードを入力してください");
-    return;
-  }
+  const res = await fetch("/api/generate-titles", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ keyword }),
+  });
 
-  resultArea.innerHTML = "<li>生成中...</li>";
+  const data = await res.json();
 
-  try {
-    const response = await fetch("/api/titles", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ keyword })
+  const area = document.getElementById("titles");
+  area.innerHTML = "";
+
+  data.titles.forEach((t) => {
+    const btn = document.createElement("button");
+    btn.textContent = t;
+    btn.addEventListener("click", () => {
+      document.getElementById("selectedTitle").value = t;
     });
+    area.appendChild(btn);
+  });
+});
 
-    const data = await response.json();
+// 本文生成
+document.getElementById("btn-generate-article").addEventListener("click", async () => {
+  const title = document.getElementById("selectedTitle").value.trim();
+  const keyword = document.getElementById("keyword").value.trim();
 
-    if (data.error) {
-      resultArea.innerHTML = `<li>エラー: ${JSON.stringify(data.error)}</li>`;
-      return;
-    }
+  if (!title) return alert("タイトルを入力または選択してください");
 
-    resultArea.innerHTML = "";
-    data.titles.forEach((t) => {
-      const li = document.createElement("li");
-      li.textContent = t;
-      resultArea.appendChild(li);
-    });
-  } catch (err) {
-    resultArea.innerHTML = `<li>通信エラー: ${err}</li>`;
-  }
+  const res = await fetch("/api/generate-article", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ title, keyword }),
+  });
+
+  const data = await res.json();
+  document.getElementById("article").value = data.article;
 });
