@@ -1,54 +1,36 @@
-// -----------------------------
-// タイトル生成
-// -----------------------------
-async function generateTitles() {
-  const keyword = document.getElementById("keywordInput").value.trim();
-  if (!keyword) return alert("キーワードを入力してください");
+document.getElementById("generateBtn").addEventListener("click", async () => {
+  const keyword = document.getElementById("keyword").value;
+  const resultArea = document.getElementById("result");
+  resultArea.innerHTML = "";
 
-  const response = await fetch("/api/titles", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ keyword })
-  });
-
-  const data = await response.json();
-  const list = document.getElementById("titleList");
-  list.innerHTML = "";
-
-  if (!data.titles || data.titles.length === 0) {
-    list.innerHTML = "<p>タイトルが生成できませんでした。</p>";
+  if (!keyword.trim()) {
+    alert("キーワードを入力してください");
     return;
   }
 
-  data.titles.forEach((t) => {
-    const btn = document.createElement("button");
-    btn.className = "title-btn";
-    btn.textContent = t;
+  resultArea.innerHTML = "<li>生成中...</li>";
 
-    btn.onclick = () => {
-      document.getElementById("selectedTitle").value = t;
-    };
-    list.appendChild(btn);
-  });
-}
+  try {
+    const response = await fetch("/api/titles", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ keyword })
+    });
 
-// -----------------------------
-// 記事生成
-// -----------------------------
-async function generateArticle() {
-  const keyword = document.getElementById("keywordInput").value.trim();
-  const title = document.getElementById("selectedTitle").value.trim();
-  const tone = document.getElementById("toneSelect").value;
+    const data = await response.json();
 
-  if (!keyword) return alert("キーワードが必要です");
-  if (!title) return alert("タイトルを選択するか入力してください");
+    if (data.error) {
+      resultArea.innerHTML = `<li>エラー: ${JSON.stringify(data.error)}</li>`;
+      return;
+    }
 
-  const response = await fetch("/api/article", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ keyword, tone, title })
-  });
-
-  const data = await response.json();
-  document.getElementById("articleOutput").value = data.markdown || "生成に失敗しました";
-}
+    resultArea.innerHTML = "";
+    data.titles.forEach((t) => {
+      const li = document.createElement("li");
+      li.textContent = t;
+      resultArea.appendChild(li);
+    });
+  } catch (err) {
+    resultArea.innerHTML = `<li>通信エラー: ${err}</li>`;
+  }
+});
