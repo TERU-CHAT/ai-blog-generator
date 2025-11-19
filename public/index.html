@@ -2,75 +2,54 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8" />
-  <title>TERU AI Blog Generator</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <link rel="stylesheet" href="./style.css" />
+  <title>TERU AI Blog Generator（SEO Expert版・Render対応）</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
-<body>
-  <div class="app">
 
-    <header class="header">
-      <h1>TERU AI Blog Generator</h1>
-      <p class="tagline">SEO検定1級ライター品質のAI記事作成ツール</p>
+<body>
+  <div class="wrap">
+    <header class="hero">
+      <h1>TERU AI Blog Generator（SEO Expert）</h1>
+      <p>SEO検定1級レベルの記事を自動生成するSEO対策プロ仕様高精度AIツール</p>
     </header>
 
-    <main class="main">
+    <!-- キーワード入力 -->
+    <section class="input-section">
+      <h2>① キーワードを入力してください</h2>
+      <input id="keywordInput" type="text" placeholder="例：副業 初心者　稼ぐ 方法" />
+      <button onclick="generateTitles()">タイトル生成</button>
+    </section>
 
-      <!-- 1: キーワード入力 -->
-      <section class="panel">
-        <h2 class="panel-title">1. キーワード入力</h2>
+    <!-- タイトル候補 -->
+    <section class="title-section">
+      <h2>② タイトル候補</h2>
+      <div id="titleList"></div>
+    </section>
 
-        <div class="field">
-          <label>キーワード（スペース区切りOK）</label>
-          <input id="keyword" type="text" placeholder="例）ダイエット 食事 糖質制限">
-        </div>
+    <!-- 記事生成 -->
+    <section class="article-section">
+      <h2>③ 記事生成</h2>
 
-        <div class="field">
-          <label>文体（Tone）</label>
-          <select id="tone">
-            <option value="polite">丁寧・ニュートラル</option>
-            <option value="feminine">優しい女性的</option>
-            <option value="masculine">力強い男性的</option>
-            <option value="expert">専門家トーン</option>
-            <option value="friendly">会話的でフレンドリー</option>
-          </select>
-        </div>
+      <label>文体（トーン）</label>
+      <select id="toneSelect">
+        <option value="ですます調">ですます調（丁寧）</option>
+        <option value="である調">である調（論文風）</option>
+        <option value="カジュアル">カジュアル</option>
+        <option value="専門家風">専門家風</option>
+      </select>
 
-        <button id="generateTitlesBtn" class="btn primary">タイトル生成</button>
-        <div id="titlesLoading" class="loading hidden">生成中...</div>
-      </section>
+      <label>生成するタイトル</label>
+      <input id="selectedTitle" type="text" placeholder="タイトル候補から選択 or 手入力" />
 
-      <!-- 2: タイトル選択 -->
-      <section class="panel">
-        <h2 class="panel-title">2. タイトル選択</h2>
+      <button onclick="generateArticle()">記事生成スタート</button>
 
-        <div id="titlesArea" class="titles-area empty">
-          <p class="placeholder">まだタイトルがありません</p>
-        </div>
-
-        <input id="selectedTitle" placeholder="選択したタイトルが入ります">
-        <button id="generateArticleBtn" disabled class="btn secondary">記事生成</button>
-
-        <div id="articleLoading" class="loading hidden">生成中...</div>
-      </section>
-
-      <!-- 3: 結果 -->
-      <section class="panel">
-        <h2 class="panel-title">3. 結果</h2>
-
-        <div id="issues" class="issues hidden"></div>
-
-        <div class="copy-toolbar">
-          <button id="copyMarkdownBtn" class="btn small">Markdownコピー</button>
-          <button id="copyHtmlBtn" class="btn small outline">HTMLコピー</button>
-        </div>
-
-        <textarea id="markdownOutput" class="markdown-output" readonly></textarea>
-      </section>
-    </main>
+      <h3>生成結果</h3>
+      <textarea id="articleOutput" rows="20" placeholder="ここに記事が表示されます"></textarea>
+    </section>
 
   </div>
 
-  <script src="./script.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
