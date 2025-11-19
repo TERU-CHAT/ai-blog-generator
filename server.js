@@ -1,122 +1,82 @@
 import express from "express";
 import fetch from "node-fetch";
-import bodyParser from "body-parser";
 import cors from "cors";
-import path from "path";
-import { fileURLToPath } from "url";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+import bodyParser from "body-parser";
 
 const app = express();
+
+// ---------------------- Content Security Policy ----------------------
+app.use((req, res, next) => {
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src 'self'; \
+    img-src 'self' data:; \
+    font-src 'self' https://fonts.gstatic.com; \
+    style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://www.gstatic.com; \
+    script-src 'self' 'unsafe-inline'; \
+    connect-src 'self' https://api.openai.com"
+  );
+  next();
+});
+
+// ---------------------- Middleware ----------------------
 app.use(cors());
 app.use(bodyParser.json());
+app.use(express.static("public"));
 
-// ---- 静的ファイル（public配下） ----
-app.use(express.static(path.join(__dirname, "public")));
-
-// ---- 環境変数 ----
+// ---------------------- ENV ----------------------
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-if (!OPENAI_API_KEY) {
-  console.error("❌ OPENAI_API_KEY が設定されていません");
-}
 
-//==============================
-// 1. タイトル生成 API
-//==============================
+// ---------------------- Title API ----------------------
 app.post("/api/titles", async (req, res) => {
   try {
     const { keyword } = req.body;
-    if (!keyword) return res.status(400).json({ error: "keyword is empty" });
+
+    if (!keyword) {
+      return res.status(400).json({ error: "keyword is empty" });
+    }
 
     const systemPrompt = `
-あなたはSEOに詳しい日本語のプロ編集者です。
-指定キーワードを必ず含む魅力的なタイトルを5つ生成してください。
-出力は必ず次の形式の JSON のみ：
-{ "titles": ["...", "...", "...", "...", "..."] }
+あなたはSEOに詳しい日本語プロ編集者です。
+与えられたキーワードを必ず自然に含めながら、検索でクリックされやすい魅力的なブログタイトルを10個生成してください。
 `;
 
-    const apiRes = await fetch("https://api.openai.com/v1/chat/completions", {
+    const userPrompt = `キーワード：${keyword}`;
+
+    const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${OPENAI_API_KEY}`
       },
       body: JSON.stringify({
         model: "gpt-4o-mini",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `キーワード：${keyword}` }
+          { role: "user", content: userPrompt }
         ],
-        temperature: 0.8
+        max_tokens: 500
       })
     });
 
-    const data = await apiRes.json();
-    let raw = data.choices?.[0]?.message?.content || "{}";
+    const data = await response.json();
 
-    // 余計なコードブロック除去
-    raw = raw.replace(/```json/g, "").replace(/```/g, "").trim();
+    if (!response.ok) {
+      return res.status(500).json({ error: data });
+    }
 
-    const parsed = JSON.parse(raw);
+    const titles = data.choices[0].message.content
+      .split("\n")
+      .filter((t) => t.trim().length > 0);
 
-    return res.json({ titles: parsed.titles || [] });
+    res.json({ titles });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    res.status(500).json({ error: "server error", detail: err });
   }
 });
 
-//==============================
-// 2. 記事生成 API
-//==============================
-app.post("/api/article", async (req, res) => {
-  try {
-    const { keyword, tone, title } = req.body;
-    if (!keyword || !title)
-      return res.status(400).json({ error: "keyword or title missing" });
-
-    const systemPrompt = `
-あなたはSEO検定1級レベルの日本語ライターです。
-指定キーワードで3000字以上、Markdown形式で記事を作成してください。
-出力は必ず次の形式の JSON のみ：
-{ "markdown": "記事内容" }
-`;
-
-    const apiRes = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        model: "gpt-4o",
-        messages: [
-          { role: "system", content: systemPrompt },
-          {
-            role: "user",
-            content: `キーワード: ${keyword}\nタイトル: ${title}\n文体: ${tone}`
-          }
-        ],
-        temperature: 0.7
-      })
-    });
-
-    const data = await apiRes.json();
-    let raw = data.choices?.[0]?.message?.content || "{}";
-    raw = raw.replace(/```json/g, "").replace(/```/g, "").trim();
-
-    const parsed = JSON.parse(raw);
-
-    return res.json({ markdown: parsed.markdown || "" });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-//==============================
-// 3. サーバー起動
-//==============================
-const PORT = process.env.PORT || 10000;
+// ---------------------- Port ----------------------
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Server running → http://localhost:${PORT}`);
 });
