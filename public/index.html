@@ -3,53 +3,30 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>TERU AI Blog Generator（SEO Expert版・Render対応）</title>
+  <title>TERU AI Blog Generator</title>
+
+  <!-- Google Fonts（CSP対応済み） -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;600;700&display=swap"
+    rel="stylesheet"
+  />
+
   <link rel="stylesheet" href="style.css" />
 </head>
 
 <body>
-  <div class="wrap">
-    <header class="hero">
-      <h1>TERU AI Blog Generator（SEO Expert）</h1>
-      <p>SEO検定1級レベルの記事を自動生成するSEO対策プロ仕様高精度AIツール</p>
-    </header>
+  <div class="container">
+    <h1>TERU AI Blog Generator（SEO Expert）</h1>
 
-    <!-- キーワード入力 -->
-    <section class="input-section">
-      <h2>① キーワードを入力してください</h2>
-      <input id="keywordInput" type="text" placeholder="例：副業 初心者　稼ぐ 方法" />
-      <button onclick="generateTitles()">タイトル生成</button>
-    </section>
+    <div class="input-area">
+      <input id="keyword" type="text" placeholder="キーワードを入力" />
+      <button id="generateBtn">タイトル生成</button>
+    </div>
 
-    <!-- タイトル候補 -->
-    <section class="title-section">
-      <h2>② タイトル候補</h2>
-      <div id="titleList"></div>
-    </section>
-
-    <!-- 記事生成 -->
-    <section class="article-section">
-      <h2>③ 記事生成</h2>
-
-      <label>文体（トーン）</label>
-      <select id="toneSelect">
-        <option value="ですます調">ですます調（丁寧）</option>
-        <option value="である調">である調（論文風）</option>
-        <option value="カジュアル">カジュアル</option>
-        <option value="専門家風">専門家風</option>
-      </select>
-
-      <label>生成するタイトル</label>
-      <input id="selectedTitle" type="text" placeholder="タイトル候補から選択 or 手入力" />
-
-      <button onclick="generateArticle()">記事生成スタート</button>
-
-      <h3>生成結果</h3>
-      <textarea id="articleOutput" rows="20" placeholder="ここに記事が表示されます"></textarea>
-    </section>
-
+    <h2>生成されたブログタイトル</h2>
+    <ul id="result"></ul>
   </div>
 
-  <script src="public/script.js"></script>
+  <script src="script.js"></script>
 </body>
 </html>
