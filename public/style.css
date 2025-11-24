@@ -1,5 +1,5 @@
 /* ============================
-   style.css（プロレベルデザイン強化版）
+   style.css（プロレベルデザイン強化版・生成テキスト非表示版）
    ============================ */
 
 :root {
@@ -65,7 +65,7 @@ body {
 }
 
 /* inputs */
-input[type="text"], input, textarea, select {
+input[type="text"], input, select {
   width: 100%;
   padding: 12px 14px;
   border-radius: 10px;
@@ -75,7 +75,7 @@ input[type="text"], input, textarea, select {
   color: #052235;
   transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
-input:focus, textarea:focus {
+input:focus {
   border-color: var(--primary);
   box-shadow: 0 0 8px rgba(11,102,255,0.15);
   outline: none;
@@ -146,19 +146,6 @@ input:focus, textarea:focus {
 .article-preview h3 { color: #0b3b66; margin-top: 12px; }
 .article-preview p { margin: 8px 0; line-height: 1.75; }
 
-/* textarea */
-#articleText {
-  width: 100%;
-  margin-top: 12px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Helvetica Neue", monospace;
-  background: #fbfdff;
-  border: 1px solid #d8eafc;
-  border-radius: 10px;
-  padding: 14px;
-  resize: vertical;
-  line-height: 1.6;
-}
-
 /* loading animation */
 .loading { font-weight: 600; color: var(--primary); }
 .dots::after {
@@ -174,3 +161,6 @@ input:focus, textarea:focus {
 
 /* note */
 .note { color: var(--muted); font-size: 13px; margin-top: 8px; }
+
+/* 非表示: 生成テキストフィールド */
+#articleText { display: none; }
