@@ -162,5 +162,5 @@ input:focus {
 /* note */
 .note { color: var(--muted); font-size: 13px; margin-top: 8px; }
 
-/* 非表示: 生成テキストフィールド */
-#articleText { display: none; }
+/* 非表示: 生成テキストフィールドおよびラベル */
+#articleText, .label[for='articleText'] { display: none; }
