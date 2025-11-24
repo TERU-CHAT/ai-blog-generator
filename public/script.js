@@ -9,49 +9,69 @@ const btnCopyHTML = document.getElementById("btn-copy-html");
 const btnCopyText = document.getElementById("btn-copy-text");
 const keywordInput = document.getElementById("keyword");
 
+// -----------------------------
+// Loading UI helper
+// -----------------------------
+function showLoading(btn, msg = "生成中...") {
+  btn.disabled = true;
+  btn.dataset.originalText = btn.textContent;
+  btn.textContent = msg;
+}
+
+function hideLoading(btn) {
+  btn.disabled = false;
+  btn.textContent = btn.dataset.originalText;
+}
+
+// -----------------------------
 // タイトル生成
+// -----------------------------
 btnGenerateTitles.addEventListener("click", async () => {
   const keyword = keywordInput.value.trim();
-  if (!keyword) return alert("キーワードを入力してください（空白区切りで複数可）");
+  if (!keyword) return alert("キーワードを入力してください");
 
-  titlesContainer.innerHTML = "<div>生成中...</div>";
+  titlesContainer.innerHTML = "<div class='loading'>AIが生成中です...</div>";
+  showLoading(btnGenerateTitles, "生成中...");
+
   try {
     const res = await fetch("/api/generate-titles", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ keyword })
     });
+
     const data = await res.json();
-    renderTitles(data.titles || []);
+    hideLoading(btnGenerateTitles);
+
+    if (!data.titles) {
+      titlesContainer.innerHTML = "タイトル生成に失敗しました";
+      return;
+    }
+
+    titlesContainer.innerHTML = "";
+    data.titles.forEach((t) => {
+      const card = document.createElement("div");
+      card.className = "title-card";
+      card.textContent = t;
+      card.onclick = () => (selectedTitleInput.value = t);
+      titlesContainer.appendChild(card);
+    });
   } catch (e) {
-    console.error(e);
+    hideLoading(btnGenerateTitles);
     titlesContainer.innerHTML = "<div>エラーが発生しました</div>";
   }
 });
 
-function renderTitles(titles) {
-  titlesContainer.innerHTML = "";
-  titles.forEach((t) => {
-    const card = document.createElement("div");
-    card.className = "title-card";
-    card.textContent = t || "";
-    card.addEventListener("click", () => {
-      selectedTitleInput.value = t;
-    });
-    titlesContainer.appendChild(card);
-  });
-}
-
-// 本文生成
+// -----------------------------
+// 記事生成
+// -----------------------------
 btnGenerateArticle.addEventListener("click", async () => {
   const title = selectedTitleInput.value.trim();
   const keyword = keywordInput.value.trim();
-  if (!title) return alert("タイトルを選択または入力してください");
-  if (!keyword) return alert("キーワードを入力してください");
+  if (!title) return alert("タイトルが空です");
+  if (!keyword) return alert("キーワードが空です");
 
-  // UX
-  btnGenerateArticle.disabled = true;
-  btnGenerateArticle.textContent = "生成中...（数秒〜数十秒かかります）";
+  showLoading(btnGenerateArticle, "AIが長文記事を生成中...(30-60秒)");
 
   try {
     const res = await fetch("/api/generate-article", {
@@ -59,46 +79,26 @@ btnGenerateArticle.addEventListener("click", async () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ title, keyword })
     });
+
     const data = await res.json();
+    hideLoading(btnGenerateArticle);
 
-    // HTML プレビュー
-    articlePreview.innerHTML = data.html || "<p>HTMLが取得できませんでした</p>";
-    // テキスト表示
-    articleTextArea.value = data.text || (data.html ? stripHtml(data.html) : "");
+    if (!data.html) {
+      articlePreview.innerHTML = "<p>生成失敗（HTMLなし）</p>";
+      articleTextArea.value = data.text || "";
+      return;
+    }
 
+    articlePreview.innerHTML = data.html;
+    articleTextArea.value = data.text;
   } catch (e) {
-    console.error(e);
-    articlePreview.innerHTML = "<p>生成に失敗しました</p>";
-    articleTextArea.value = "";
-  } finally {
-    btnGenerateArticle.disabled = false;
-    btnGenerateArticle.textContent = "ブログ本文を生成";
+    hideLoading(btnGenerateArticle);
+    articlePreview.innerHTML = "<p>生成時にエラー</p>";
   }
 });
 
-// コピー機能
-btnCopyHTML.addEventListener("click", async () => {
-  const html = articlePreview.innerHTML;
-  try {
-    await navigator.clipboard.writeText(html);
-    alert("HTML をクリップボードにコピーしました");
-  } catch {
-    alert("コピーに失敗しました");
-  }
-});
-btnCopyText.addEventListener("click", async () => {
-  const txt = articleTextArea.value;
-  try {
-    await navigator.clipboard.writeText(txt);
-    alert("テキストをクリップボードにコピーしました");
-  } catch {
-    alert("コピーに失敗しました");
-  }
-});
-
-// ヘルパー: HTML をテキスト化（非常に簡易）
-function stripHtml(html) {
-  const tmp = document.createElement("div");
-  tmp.innerHTML = html;
-  return tmp.innerText;
-}
+// -----------------------------
+// コピー
+// -----------------------------
+btnCopyHTML.onclick = () => navigator.clipboard.writeText(articlePreview.innerHTML);
+btnCopyText.onclick = () => navigator.clipboard.writeText(articleTextArea.value);
