@@ -1,4 +1,4 @@
-// server.js（完全リセット安定版 + 15000トークン + タイトル候補安定版）
+// server.js（タイトル案をHTML化して確実に表示させる版）
 
 import express from "express";
 import fetch from "node-fetch";
@@ -12,26 +12,38 @@ app.use(express.static("public"));
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
-// **安全・安定のための固定プロンプト（タイトル候補 + 本文生成）**
-const buildPrompt = (keyword) => `
-以下の要件に沿ってSEO記事を作成してください。
 
-【目的】
-検索上位を獲得する高品質SEO記事を生成する。
+// ---- Markdown → HTML（最軽量の変換） ----
+function mdToHtml(md) {
+    if (!md) return "";
 
-【条件】
-・キーワード：${keyword}
-・文字数：3000文字以上
-・構成：H1（タイトル）、H2、H3 を必ず使用
-・H2 は5つ以上、各 H2 の配下に H3 を2つ以上
-・H3 の本文は300文字以上
-・文章はプロのSEOライターとして自然で論理的
-・冗長表現を避け、専門性・網羅性を高める
-・読者ニーズに100%回答する構成
-・タイトルはSEO最適化のうえ 5案 提示
-・その後に「記事本文」を出力
+    let html = md;
 
-【出力形式（絶対にこの順番で）】
+    // H2
+    html = html.replace(/^## (.*)$/gm, "<h2>$1</h2>");
+
+    // H3
+    html = html.replace(/^### (.*)$/gm, "<h3>$1</h3>");
+
+    // リスト
+    html = html.replace(/^- (.*)$/gm, "<li>$1</li>");
+    html = html.replace(/(<li>[\s\S]*?<\/li>)/gm, "<ul>$1</ul>");
+
+    // 段落
+    html = html.replace(/([^>\n]+)\n/g, "<p>$1</p>");
+
+    return html;
+}
+
+
+// ---- プロンプト ----
+function buildPrompt(keyword) {
+    return `
+以下の条件に従い、SEO記事を生成してください。
+
+【キーワード】${keyword}
+
+【出力順】
 1. ## タイトル候補
 - タイトル案1
 - タイトル案2
@@ -39,32 +51,35 @@ const buildPrompt = (keyword) => `
 - タイトル案4
 - タイトル案5
 
-2. ## 本文
-HTML形式で出力してください。
-H2 → 「## H2: 見出し」
-H3 → 「### H3: 見出し」
-本文は段落（<p>〜</p>）で囲んでください。
+2. ## 本文（HTML形式）
+H2は「## H2: 見出し」
+H3は「### H3: 見出し」
+本文は<p></p>で囲む
+
+【制約】
+・H2 5つ以上
+・H3 各H2に2つ以上
+・H3本文は300文字以上
+・総文字数3000字以上
 `;
+}
 
 
-// ------------------- API ------------------------
+// ---- API ----
 app.post("/generate", async (req, res) => {
     const { keyword } = req.body;
 
     if (!keyword) {
-        return res.json({ error: "キーワードが入力されていません。" });
+        return res.json({ error: "キーワードを入力してください。" });
     }
 
     try {
         const payload = {
             model: "gpt-4o",
-            max_tokens: 15000,  // ★15000トークンまで拡張
+            max_tokens: 15000,
             temperature: 0.7,
             messages: [
-                {
-                    role: "user",
-                    content: buildPrompt(keyword)
-                }
+                { role: "user", content: buildPrompt(keyword) }
             ]
         };
 
@@ -79,33 +94,27 @@ app.post("/generate", async (req, res) => {
 
         const data = await response.json();
 
-        if (!data.choices || !data.choices[0]) {
-            return res.json({ error: "AIから適切な応答を得られませんでした。" });
+        if (!data.choices) {
+            return res.json({ error: "AI応答が取得できません。" });
         }
 
-        const aiText = data.choices[0].message.content;
+        const raw = data.choices[0].message.content;
 
-        // HTML抽出（HTMLがなくても必ず返す）
-        let html = "";
-        const htmlMatch = aiText.match(/<[^>]+>/);
-        if (htmlMatch) {
-            html = aiText;
-        } else {
-            html = `<div><pre>${aiText}</pre></div>`;
-        }
+        // ▼ Markdown → HTML に変換してから返す（ここが超重要）
+        const html = mdToHtml(raw);
 
-        res.json({
+        return res.json({
             html: html,
-            raw: aiText
+            raw: raw
         });
 
-    } catch (err) {
-        console.error(err);
-        res.json({ error: "サーバーエラーが発生しました。" });
+    } catch (e) {
+        console.error(e);
+        return res.json({ error: "サーバーエラーが発生しました。" });
     }
 });
 
 
-// ------------------- START ------------------------
+// ---- SERVER START ----
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Server running on ${PORT}`));
