@@ -1,5 +1,3 @@
-// script.js（完全リセット＋15000トークン対応＋タイトル候補安定版＋生成テキスト非表示）
-
 const generateBtn = document.getElementById("generateBtn");
 const loading = document.getElementById("loading");
 const resultArea = document.getElementById("result");
