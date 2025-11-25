@@ -1,60 +1,33 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>SEO Blog Generator</title>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SEO記事自動生成ツール</title>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-  <div class="app">
-    <header class="header">
-      <h1>SEO Blog Generator</h1>
-      <p class="subtitle">キーワード入力のみで記事生成（プロ仕様のSEO対策記事生成AIツール）</p>
-    </header>
 
-    <main class="main">
-      <!-- キーワード -->
-      <section class="panel">
-        <h2 class="panel-title">キーワード（空白区切りで複数指定）</h2>
-        <input id="keyword" placeholder="例：脱毛 医療 料金 比較" />
-        <div class="row">
-          <button id="btn-generate-titles" class="btn primary">タイトル候補を生成</button>
-        </div>
-      </section>
+    <div class="container">
 
-      <!-- タイトル候補 -->
-      <section class="panel">
-        <h2 class="panel-title">タイトル候補（クリックで選択・編集可）</h2>
-        <div id="titles" class="titles-grid"></div>
+        <h1>SEO記事自動生成ツール</h1>
 
-        <label class="label">選択・編集済みタイトル</label>
-        <input id="selectedTitle" placeholder="ここで加筆修正できます" />
-      </section>
+        <label for="keyword">キーワードを入力してください</label>
+        <input type="text" id="keyword" placeholder="例：副業 おすすめ">
 
-      <!-- 記事生成 -->
-      <section class="panel">
-        <h2 class="panel-title">記事生成</h2>
-        <div class="row">
-          <button id="btn-generate-article" class="btn accent">ブログ本文を生成</button>
-          <div class="spacer"></div>
-          <button id="btn-copy-html" class="btn outline small">HTMLをコピー</button>
-          <button id="btn-copy-text" class="btn outline small">テキストをコピー</button>
-        </div>
-        <p class="note">生成には数秒〜数十秒かかります。OpenAI APIキーはサーバーに設定済みであること。</p>
-      </section>
+        <button id="generateBtn">記事を生成する</button>
 
-      <!-- 結果 -->
-      <section class="panel result-panel">
-        <h2 class="panel-title">生成結果（プレビュー）</h2>
-        <div id="articlePreview" class="article-preview"></div>
-        <h3 class="label">生成テキスト（改行は1文ごと）</h3>
-        <textarea id="articleText" rows="18"></textarea>
-      </section>
-    </main>
-  </div>
+        <!-- ローディング -->
+        <div id="loading">生成中...しばらくお待ちください</div>
 
-  <script src="script.js"></script>
+        <!-- ▼プレビュー（生成結果のみ表示） -->
+        <div id="result"></div>
+
+        <!-- ▼完全非表示ブロック（内部処理用 / UIには一切表示されない） -->
+        <div id="generatedText" style="display:none;"></div>
+
+    </div>
+
+    <script src="script.js"></script>
 </body>
 </html>
