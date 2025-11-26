@@ -10,13 +10,27 @@ const __dirname = path.dirname(__filename);
 
 const app = express();
 
+// ------------------ CSP ------------------
+app.use((req, res, next) => {
+  res.setHeader(
+    "Content-Security-Policy",
+    "default-src 'self'; " +
+      "img-src 'self' data:; " +
+      "font-src 'self' https://fonts.gstatic.com; " +
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://www.gstatic.com; " +
+      "script-src 'self' 'unsafe-inline'; " +
+      "connect-src 'self' https://api.openai.com"
+  );
+  next();
+});
+
 app.use(cors());
 app.use(bodyParser.json({ limit: "1mb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
 
-// ---- JSON 抽出 ----
+// ヘルパー: テキストから最初の JSON オブジェクトを抽出して parse
 function extractJSONFromText(text) {
   if (!text) return null;
   text = text.replace(/```json|```/g, "").trim();
@@ -25,29 +39,43 @@ function extractJSONFromText(text) {
 
   try {
     return JSON.parse(match[0]);
-  } catch {
+  } catch (e) {
+    const cleaned = match[0]
+      .replace(/,\s*}/g, "}")
+      .replace(/,\s*\]/g, "]");
     try {
-      const cleaned = match[0].replace(/,\s*}/g, "}").replace(/,\s*\]/g, "]");
       return JSON.parse(cleaned);
-    } catch {
+    } catch (e2) {
       return null;
     }
   }
 }
 
-// ---- タイトル生成 API（元コード維持） ----
+// -----------------------------
+//  タイトル生成 API（5個）
+// -----------------------------
 app.post("/api/generate-titles", async (req, res) => {
   try {
     const { keyword } = req.body;
-    if (!keyword) return res.status(400).json({ error: "keyword is empty" });
+    if (!keyword || !keyword.trim()) {
+      return res.status(400).json({ error: "keyword is empty" });
+    }
 
     const systemPrompt = `
 あなたはSEO検定1級レベルの日本語プロ編集者です。
-以下の形式のみで返してください：
+以下の条件に従って、キーワード（空白区切り）を必ず含む魅力的なブログタイトルを **ちょうど5件** JSON だけで返してください。
+
+形式：
 {
   "titles": ["タイトルA", "タイトルB", "タイトルC", "タイトルD", "タイトルE"]
 }
-必ず5件出力すること。`;
+
+条件:
+- キーワードはすべて自然に含める。
+- 番号は付けない。
+- 検索意図が明確でクリックされやすい表現。
+- 余計な説明は出力しない。
+`;
 
     const userPrompt = `キーワード: ${keyword}`;
 
@@ -63,8 +91,8 @@ app.post("/api/generate-titles", async (req, res) => {
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        max_tokens: 1000,
         temperature: 0.8,
+        max_tokens: 800,
       }),
     });
 
@@ -72,58 +100,81 @@ app.post("/api/generate-titles", async (req, res) => {
     const raw = apiData.choices?.[0]?.message?.content || "";
     const parsed = extractJSONFromText(raw);
 
-    if (!parsed || !parsed.titles) {
+    if (!parsed || !Array.isArray(parsed.titles)) {
       const fallback = raw
         .split(/\r?\n/)
-        .map(s => s.replace(/^[0-9\.\-\)\s]+/, "").trim())
+        .map((s) => s.replace(/^[0-9\.\-\)\s]+/, "").trim())
         .filter(Boolean)
         .slice(0, 5);
       return res.json({ titles: fallback });
     }
 
-    res.json({ titles: parsed.titles });
+    const titles = parsed.titles.slice(0, 5);
+    while (titles.length < 5) titles.push("");
+
+    res.json({ titles });
   } catch (err) {
-    console.error(err);
+    console.error("generate-titles error:", err);
     res.status(500).json({ error: "server error" });
   }
 });
 
-// ---- 記事生成（まとめ必須・15000トークン） ----
+// -----------------------------
+//  記事生成 API（HTML + text）
+// -----------------------------
 app.post("/api/generate-article", async (req, res) => {
   try {
     const { title, keyword } = req.body;
-    if (!title) return res.status(400).json({ error: "title is empty" });
-    if (!keyword) return res.status(400).json({ error: "keyword is empty" });
+    if (!title?.trim()) return res.status(400).json({ error: "title is empty" });
+    if (!keyword?.trim()) return res.status(400).json({ error: "keyword is empty" });
 
     const systemPrompt = `
 あなたはSEO検定1級レベルのプロライターです。
-以下の厳密な形式で JSON のみ出力してください：
+以下のルールに従って、日本語のSEO特化ブログ記事を生成してください。
+
+【出力形式（必須）】
+必ず JSON のみ。余計なコメント禁止。
+
 {
-  "html": "...",
-  "text": "..."
+  "html": "<h1>...</h1>...",
+  "text": "## H2: ...\n本文..."
 }
 
 【構成ルール】
-1) H1は与えられたタイトルを必ず使用
-2) H2を5個以上
-3) 各H2配下にH3を2個以上
-4) 各H3本文は300文字以上
-5) 導入500文字以上
-6) 記事全体3000文字以上
-7) 1文ごとに改行
-8) H2/H3はHTMLタグで出力
-9) プレーンテキストは「## H2:〜」「### H3:〜」形式
+1) H1 は指定タイトルをそのまま使用（<h1>）。
+2) H2 を 5個以上、キーワードまたは類義語を自然に含める。
+3) 各 H2 の下に H3 を最低2つ置く。
+4) 各 H3 の本文は 300文字以上。
+5) 導入文は 500文字以上。
+6) 総文字数は 3000文字以上。
+7) 文末は **1文ごとに改行**。
+8) 読者に語りかける優しい口調（〜ですよ、〜なんです、〜と思えるはずですよ など）。
+9) <h2><h3> の **前後に必ず1行改行** を入れること。
+10) 主語の連続（「〜は、〜は」）を避け自然な文章にする。
+11) 語尾の連続（「〜です。」「〜です。」）は禁止。語尾バリエーションを広く使用する。
+12) 語尾の例：
+- 〜ですよ
+- 〜なんです
+- 〜といえます
+- 〜と考えられています
+- 〜のが特徴です
+- 〜でしょう
+- 〜になります
+- 〜とされています
+- 〜と感じられるはずです
+- 〜と言えるでしょう
+- 〜でしょうね
+- 〜という流れになります
+（これらを自然に散りばめる）
+13) 最後に必ず H2「まとめ」を作成し、500文字以上で締める。
+14) HTML と text の内容は一致させること。
 
-【重要】
-11) 最後に必ず <h2>まとめ</h2> を作成し、500文字以上で締めること。
-12) まとめは絶対に省略してはならない。
-
-余計な説明文は禁止。
+【注意】
+- JSON 以外の文字は絶対に出力しない。
 `;
 
     const userPrompt = `タイトル: ${title}
-キーワード: ${keyword}
-`;
+キーワード: ${keyword}`;
 
     const response = await fetch("https://api.openai.com/v1/chat/completions", {
       method: "POST",
@@ -137,7 +188,7 @@ app.post("/api/generate-article", async (req, res) => {
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        temperature: 0.7,
+        temperature: 0.65,
         max_tokens: 15000
       }),
     });
@@ -146,11 +197,8 @@ app.post("/api/generate-article", async (req, res) => {
     const raw = apiData.choices?.[0]?.message?.content || "";
     const parsed = extractJSONFromText(raw);
 
-    if (!parsed) {
-      return res.json({
-        html: raw,
-        text: raw.replace(/<[^>]*>/g, "")
-      });
+    if (!parsed || (!parsed.html && !parsed.text)) {
+      return res.json({ html: "", text: raw });
     }
 
     res.json({
@@ -159,7 +207,7 @@ app.post("/api/generate-article", async (req, res) => {
     });
 
   } catch (err) {
-    console.error(err);
+    console.error("generate-article error:", err);
     res.status(500).json({ error: "server error" });
   }
 });
