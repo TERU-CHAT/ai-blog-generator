@@ -45,7 +45,13 @@
         <p class="note">生成には数秒〜数十秒かかります。OpenAI APIキーはサーバーに設定済みであること。</p>
       </section>
 
-      <!-- 結果 -->
+      <!-- ▼ HTMLプレビュー（UIから完全非表示） -->
+      <section class="panel result-panel" style="display:none;">
+        <h2 class="panel-title">生成結果（HTML非表示）</h2>
+        <div id="articlePreview" class="article-preview"></div>
+      </section>
+
+      <!-- ▼ テキストプレビュー（表示） -->
       <section class="panel result-panel">
         <h2 class="panel-title">生成テキスト</h2>
         <textarea id="articleText" rows="24"></textarea>
