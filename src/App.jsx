@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { FileText, Sparkles, Download, Copy, Check } from 'lucide-react';
+import { FileText, Sparkles, Download, Copy, Check, Key } from 'lucide-react';
 
 export default function AIBlogGenerator() {
+  const [apiKey, setApiKey] = useState('');
+  const [showApiKeyInput, setShowApiKeyInput] = useState(true);
   const [keywords, setKeywords] = useState('');
   const [step, setStep] = useState('input');
   const [titles, setTitles] = useState([]);
@@ -13,8 +15,14 @@ export default function AIBlogGenerator() {
   const [copied, setCopied] = useState(false);
   const [outputFormat, setOutputFormat] = useState('text');
 
-  // 環境変数からAPIキーを取得
-  const API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY;
+  const saveApiKey = () => {
+    if (apiKey.trim()) {
+      setShowApiKeyInput(false);
+      alert('APIキーを設定しました。記事生成を開始できます。');
+    } else {
+      alert('APIキーを入力してください');
+    }
+  };
 
   const generateTitles = async () => {
     if (!keywords.trim()) {
@@ -22,8 +30,9 @@ export default function AIBlogGenerator() {
       return;
     }
 
-    if (!API_KEY) {
-      alert('APIキーが設定されていません。環境変数を確認してください。');
+    if (!apiKey) {
+      alert('APIキーが設定されていません');
+      setShowApiKeyInput(true);
       return;
     }
 
@@ -35,7 +44,7 @@ export default function AIBlogGenerator() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': API_KEY,
+          'x-api-key': apiKey,
           'anthropic-version': '2023-06-01',
         },
         body: JSON.stringify({
@@ -66,6 +75,10 @@ JSON形式で以下のように返してください（他のテキストは一�
         })
       });
 
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`);
+      }
+
       const data = await response.json();
       const text = data.content.find(c => c.type === 'text')?.text || '';
       const cleaned = text.replace(/```json|```/g, '').trim();
@@ -73,7 +86,7 @@ JSON形式で以下のように返してください（他のテキストは一�
       setTitles(parsed.titles);
     } catch (error) {
       console.error('タイトル生成エラー:', error);
-      alert('タイトルの生成に失敗しました。もう一度お試しください。');
+      alert('タイトルの生成に失敗しました。APIキーが正しいか確認してください。');
       setStep('input');
     } finally {
       setIsGenerating(false);
@@ -138,7 +151,7 @@ JSON形式で以下のように返してください（他のテキストは一�
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'x-api-key': API_KEY,
+          'x-api-key': apiKey,
           'anthropic-version': '2023-06-01',
         },
         body: JSON.stringify({
@@ -171,7 +184,7 @@ JSON形式で以下のように返してください（他のテキストは一�
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'x-api-key': API_KEY,
+            'x-api-key': apiKey,
             'anthropic-version': '2023-06-01',
           },
           body: JSON.stringify({
@@ -213,7 +226,7 @@ ${generatedArticle}
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'x-api-key': API_KEY,
+                'x-api-key': apiKey,
                 'anthropic-version': '2023-06-01',
               },
               body: JSON.stringify({
@@ -331,6 +344,49 @@ ${generatedArticle}
     setEditingTitle('');
   };
 
+  if (showApiKeyInput && !apiKey) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4 flex items-center justify-center">
+        <div className="bg-white rounded-lg shadow-xl p-8 max-w-md w-full">
+          <div className="text-center mb-6">
+            <Key className="w-16 h-16 text-indigo-600 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">Claude API キーの設定</h2>
+            <p className="text-gray-600 text-sm">記事生成にはClaude APIキーが必要です</p>
+          </div>
+          
+          <div className="mb-6">
+            <label className="block text-gray-700 font-semibold mb-2">
+              APIキーを入力
+            </label>
+            <input
+              type="password"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder="sk-ant-..."
+              className="w-full px-4 py-3 border-2 border-gray-300 rounded-lg focus:border-indigo-500 focus:outline-none"
+            />
+            <p className="text-xs text-gray-500 mt-2">
+              APIキーは https://console.anthropic.com で取得できます
+            </p>
+          </div>
+
+          <button
+            onClick={saveApiKey}
+            className="w-full bg-indigo-600 text-white py-3 rounded-lg font-bold hover:bg-indigo-700 transition"
+          >
+            設定して開始
+          </button>
+
+          <div className="mt-6 p-4 bg-yellow-50 rounded-lg border-l-4 border-yellow-400">
+            <p className="text-sm text-gray-700">
+              <strong>⚠️ 注意:</strong> APIキーはブラウザのメモリにのみ保存され、サーバーには送信されません。
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className="max-w-5xl mx-auto">
@@ -340,6 +396,12 @@ ${generatedArticle}
             <h1 className="text-4xl font-bold text-gray-800">AI Blog Generator</h1>
           </div>
           <p className="text-gray-600 text-lg">SEO検定1級レベルの高品質な記事を自動生成</p>
+          <button
+            onClick={() => setShowApiKeyInput(true)}
+            className="mt-2 text-sm text-indigo-600 hover:text-indigo-800"
+          >
+            APIキーを変更
+          </button>
         </div>
 
         {step === 'input' && (
