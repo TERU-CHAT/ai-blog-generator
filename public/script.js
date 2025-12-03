@@ -3,13 +3,15 @@ const btnGenerateTitles = document.getElementById("btn-generate-titles");
 const titlesContainer = document.getElementById("titles");
 const selectedTitleInput = document.getElementById("selectedTitle");
 const btnGenerateArticle = document.getElementById("btn-generate-article");
-const articlePreview = document.getElementById("articlePreview");   // 非表示のHTMLプレビュー
-const articleTextArea = document.getElementById("articleText");     // 表示用テキスト
+const articlePreview = document.getElementById("articlePreview"); // 非表示のHTML格納
+const articleTextArea = document.getElementById("articleText");   // 表示用テキスト
 const btnCopyHTML = document.getElementById("btn-copy-html");
 const btnCopyText = document.getElementById("btn-copy-text");
 const keywordInput = document.getElementById("keyword");
 
-// --- タイトル生成 ---
+// -------------------------------
+// タイトル生成
+// -------------------------------
 btnGenerateTitles.addEventListener("click", async () => {
   const keyword = keywordInput.value.trim();
   if (!keyword) return alert("キーワードを入力してください（空白区切りで複数可）");
@@ -22,10 +24,17 @@ btnGenerateTitles.addEventListener("click", async () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ keyword })
     });
+
+    if (!res.ok) {
+      titlesContainer.innerHTML = "<div>タイトル生成に失敗しました</div>";
+      return;
+    }
+
     const data = await res.json();
     renderTitles(data.titles || []);
+
   } catch (e) {
-    console.error(e);
+    console.error("タイトル生成エラー:", e);
     titlesContainer.innerHTML = "<div>エラーが発生しました</div>";
   }
 });
@@ -43,7 +52,9 @@ function renderTitles(titles) {
   });
 }
 
-// --- 本文生成 ---
+// -------------------------------
+// 本文生成
+// -------------------------------
 btnGenerateArticle.addEventListener("click", async () => {
   const title = selectedTitleInput.value.trim();
   const keyword = keywordInput.value.trim();
@@ -60,24 +71,29 @@ btnGenerateArticle.addEventListener("click", async () => {
       body: JSON.stringify({ title, keyword })
     });
 
+    if (!res.ok) {
+      articleTextArea.value = "生成に失敗しました。";
+      return;
+    }
+
     const data = await res.json();
 
-    // ▼ HTMLは非表示の articlePreview に入れる
+    // ▼ HTML（非表示領域へ保存）
     articlePreview.innerHTML = data.html || "";
 
-    // ▼ テキストプレビュー（表示する）
+    // ▼ テキスト（画面表示）
     if (data.text && data.text.trim()) {
       articleTextArea.value = data.text;
     } else {
       articleTextArea.value = stripHtml(data.html || "");
     }
 
-    // ▼ コピー用に保存
+    // ▼ コピー用データを保持
     btnCopyHTML.dataset.html = data.html || "";
     btnCopyText.dataset.text = data.text || articleTextArea.value || "";
 
   } catch (e) {
-    console.error(e);
+    console.error("記事生成エラー:", e);
     articleTextArea.value = "生成に失敗しました。";
   } finally {
     btnGenerateArticle.disabled = false;
@@ -85,7 +101,9 @@ btnGenerateArticle.addEventListener("click", async () => {
   }
 });
 
-// --- コピー機能 ---
+// -------------------------------
+// コピー機能
+// -------------------------------
 btnCopyHTML.addEventListener("click", async () => {
   const html = btnCopyHTML.dataset.html || "";
   if (!html) return alert("HTMLがありません。記事を生成してください。");
@@ -100,7 +118,8 @@ btnCopyText.addEventListener("click", async () => {
   alert("テキストをコピーしました");
 });
 
-// HTML → TEXT
+// -------------------------------
+// HTML → TEXT（簡易）
 function stripHtml(html) {
   const tmp = document.createElement("div");
   tmp.innerHTML = html;
