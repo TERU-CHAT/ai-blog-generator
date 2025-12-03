@@ -19,7 +19,7 @@ app.use((req, res, next) => {
       "font-src 'self' https://fonts.gstatic.com; " +
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://www.gstatic.com; " +
       "script-src 'self' 'unsafe-inline'; " +
-      "connect-src 'self' https://api.openai.com"
+      "connect-src 'self' https://api.anthropic.com"
   );
   next();
 });
@@ -28,9 +28,12 @@ app.use(cors());
 app.use(bodyParser.json({ limit: "1mb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY || "";
+// Claude API key
+const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY || "";
 
-// ヘルパー: テキストから最初の JSON オブジェクトを抽出して parse
+// ------------------------
+// JSON 抽出ユーティリティ
+// ------------------------
 function extractJSONFromText(text) {
   if (!text) return null;
   text = text.replace(/```json|```/g, "").trim();
@@ -51,13 +54,13 @@ function extractJSONFromText(text) {
   }
 }
 
-// -----------------------------
-//  タイトル生成 API（5個）
-// -----------------------------
+// ------------------------------------------------------
+// タイトル生成 API（Claude Sonnet 4 仕様）
+// ------------------------------------------------------
 app.post("/api/generate-titles", async (req, res) => {
   try {
     const { keyword } = req.body;
-    if (!keyword || !keyword.trim()) {
+    if (!keyword?.trim()) {
       return res.status(400).json({ error: "keyword is empty" });
     }
 
@@ -71,33 +74,34 @@ app.post("/api/generate-titles", async (req, res) => {
 }
 
 条件:
-- キーワードはすべて自然に含める。
+- キーワードは自然に含める。
 - 番号は付けない。
-- 検索意図が明確でクリックされやすい表現。
-- 余計な説明は出力しない。
+- 検索意図を満たしたクリックされやすい内容。
+- 不要な解説は絶対に出力しない。
 `;
 
     const userPrompt = `キーワード: ${keyword}`;
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        "x-api-key": CLAUDE_API_KEY,
+        "anthropic-version": "2023-06-01"
       },
       body: JSON.stringify({
-        model: "gpt-4o",
-        messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 2000,
         temperature: 0.8,
-        max_tokens: 800,
+        messages: [
+          { role: "user", content: systemPrompt + "\n" + userPrompt }
+        ]
       }),
     });
 
     const apiData = await response.json();
-    const raw = apiData.choices?.[0]?.message?.content || "";
+    const raw = apiData?.content?.[0]?.text || "";
+
     const parsed = extractJSONFromText(raw);
 
     if (!parsed || !Array.isArray(parsed.titles)) {
@@ -109,19 +113,17 @@ app.post("/api/generate-titles", async (req, res) => {
       return res.json({ titles: fallback });
     }
 
-    const titles = parsed.titles.slice(0, 5);
-    while (titles.length < 5) titles.push("");
+    res.json({ titles: parsed.titles.slice(0, 5) });
 
-    res.json({ titles });
   } catch (err) {
     console.error("generate-titles error:", err);
     res.status(500).json({ error: "server error" });
   }
 });
 
-// -----------------------------
-//  記事生成 API（HTML + text）
-// -----------------------------
+// ------------------------------------------------------
+// 記事生成 API（Claude Sonnet 4）
+// ------------------------------------------------------
 app.post("/api/generate-article", async (req, res) => {
   try {
     const { title, keyword } = req.body;
@@ -130,10 +132,11 @@ app.post("/api/generate-article", async (req, res) => {
 
     const systemPrompt = `
 あなたはSEO検定1級レベルのプロライターです。
-以下のルールに従って、日本語のSEO対策をしたブログ記事を生成してください。
+以下のルールに従って、日本語のSEOブログ記事を生成してください。
 
 【出力形式（必須）】
-必ず JSON のみ。余計なコメント禁止。
+JSON のみを返す。
+余計な説明文は絶対に禁止。
 
 {
   "html": "<h1>...</h1>...",
@@ -141,63 +144,49 @@ app.post("/api/generate-article", async (req, res) => {
 }
 
 【構成ルール】
-1) H1 は指定タイトルをそのまま使用（<h1>）。
-2) H2 を 5個以上、キーワードまたは類義語を自然に含める。
-3) 各 H2 の下に H3 を３つ以上置く。
-4) 各 H3 の本文は 300文字以上。
-5) 導入文は 500文字以上。
-6) 総文字数は 4000文字以上。
-7) 文末は **1文ごとに改行**。
-8) 読者に語りかける優しい口調（〜ですよ、〜なんです、〜と思えるはずですよ など）。
-9) <h2><h3> の **前後に必ず1行改行** を入れること。
-10) 主語の連続（「〜は、〜は」）を避け自然な文章にする。
-11) 語尾の連続（「〜です。」「〜です。」）は禁止。語尾バリエーションを広く使用する。
-12) 語尾の例：
-- 〜ですよ
-- 〜なんです
-- 〜といえます
-- 〜と考えられています
-- 〜のが特徴です
-- 〜でしょう
-- 〜になります
-- 〜とされています
-- 〜と感じられるはずです
-- 〜と言えるでしょう
-- 〜でしょうね
-- 〜という流れになります
-（これらを自然に散りばめる）
-13) 最後に必ず H2「まとめ」を作成し、500文字以上で締める。
-14) HTML と text の内容は一致させること。
+1) H1 は指定タイトルを使用。
+2) H2 を5個以上、キーワードや類義語を自然に含める。
+3) 各H2 の下に H3 を3個以上。
+4) 各H3 本文は300文字以上。
+5) 導入文は500文字以上。
+6) 記事全体は4000文字以上。
+7) 1文ごとに改行する。
+8) 語尾の連続「です。」「です。」は禁止。
+9) 語尾バリエーションを自然に使用（〜ですよ、〜なんです、〜といえます等）。
+10) 主語の連続も禁止し、自然で読みやすい文体にする。
+11) <h2><h3> の上下に1行改行を必ず入れる。
+12) 最後に H2「まとめ」を用意し500文字以上。
+13) HTML と text の内容は同一にする。
 
 【注意】
-- JSON 以外の文字は絶対に出力しない。
+- JSON 以外の出力は禁止。
 `;
 
     const userPrompt = `タイトル: ${title}
 キーワード: ${keyword}`;
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${OPENAI_API_KEY}`,
+        "x-api-key": CLAUDE_API_KEY,
+        "anthropic-version": "2023-06-01"
       },
       body: JSON.stringify({
-        model: "gpt-4o",
+        model: "claude-sonnet-4-20250514",
+        max_tokens: 15000,
+        temperature: 0.6,
         messages: [
-          { role: "system", content: systemPrompt },
-          { role: "user", content: userPrompt },
-        ],
-        temperature: 0.65,
-        max_tokens: 10000
+          { role: "user", content: systemPrompt + "\n" + userPrompt }
+        ]
       }),
     });
 
     const apiData = await response.json();
-    const raw = apiData.choices?.[0]?.message?.content || "";
+    const raw = apiData?.content?.[0]?.text || "";
     const parsed = extractJSONFromText(raw);
 
-    if (!parsed || (!parsed.html && !parsed.text)) {
+    if (!parsed) {
       return res.json({ html: "", text: raw });
     }
 
