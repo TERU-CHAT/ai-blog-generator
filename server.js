@@ -25,38 +25,51 @@ app.use((req, res, next) => {
 });
 
 app.use(cors());
-app.use(bodyParser.json({ limit: "1mb" }));
+app.use(bodyParser.json({ limit: "2mb" }));
 app.use(express.static(path.join(__dirname, "public")));
 
-// Claude API key
+// Claude API KEY
 const CLAUDE_API_KEY = process.env.CLAUDE_API_KEY || "";
 
-// ------------------------
-// JSON 抽出ユーティリティ
-// ------------------------
+// --------------------------------------------------
+// JSON を最も確実に抽出する強化版関数
+// Claude は前後に文章が出がちなので、強制で最大 JSON を抽出
+// --------------------------------------------------
 function extractJSONFromText(text) {
   if (!text) return null;
+
+  // コードブロックの除去
   text = text.replace(/```json|```/g, "").trim();
-  const match = text.match(/\{[\s\S]*\}/);
-  if (!match) return null;
+
+  // 最初の { と 最後の } を見つける
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+
+  if (start === -1 || end === -1 || end <= start) {
+    return null;
+  }
+
+  const jsonString = text.substring(start, end + 1);
 
   try {
-    return JSON.parse(match[0]);
+    return JSON.parse(jsonString);
   } catch (e) {
-    const cleaned = match[0]
+    // , の後に余計な改行が入るなどの補正
+    const cleaned = jsonString
       .replace(/,\s*}/g, "}")
       .replace(/,\s*\]/g, "]");
     try {
       return JSON.parse(cleaned);
     } catch (e2) {
+      console.error("JSON parse failed:", e2);
       return null;
     }
   }
 }
 
-// ------------------------------------------------------
-// タイトル生成 API（Claude Sonnet 4 仕様）
-// ------------------------------------------------------
+// ==================================================
+//  タイトル生成 API（Claude Sonnet 4）
+// ==================================================
 app.post("/api/generate-titles", async (req, res) => {
   try {
     const { keyword } = req.body;
@@ -64,23 +77,24 @@ app.post("/api/generate-titles", async (req, res) => {
       return res.status(400).json({ error: "keyword is empty" });
     }
 
-    const systemPrompt = `
+    const prompt = `
 あなたはSEO検定1級レベルの日本語プロ編集者です。
-以下の条件に従って、キーワード（空白区切り）を必ず含む魅力的なブログタイトルを **ちょうど5件** JSON だけで返してください。
+以下の条件に従い、キーワードを自然に含めたブログタイトルを **5件だけ** JSON 形式で返してください。
 
-形式：
+必ず以下の形式のみを出力すること：
+
 {
   "titles": ["タイトルA", "タイトルB", "タイトルC", "タイトルD", "タイトルE"]
 }
 
-条件:
-- キーワードは自然に含める。
-- 番号は付けない。
-- 検索意図を満たしたクリックされやすい内容。
-- 不要な解説は絶対に出力しない。
-`;
+● 注意
+- JSON 以外の文章を一切書かない。
+- タイトルの前に番号を付けない。
+- クリック率が高くなるような自然で魅力的なタイトル。
+- 余計な説明は絶対に禁止。
 
-    const userPrompt = `キーワード: ${keyword}`;
+キーワード：${keyword}
+`;
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -94,7 +108,7 @@ app.post("/api/generate-titles", async (req, res) => {
         max_tokens: 1000,
         temperature: 0.8,
         messages: [
-          { role: "user", content: systemPrompt + "\n" + userPrompt }
+          { role: "user", content: prompt }
         ]
       }),
     });
@@ -105,12 +119,9 @@ app.post("/api/generate-titles", async (req, res) => {
     const parsed = extractJSONFromText(raw);
 
     if (!parsed || !Array.isArray(parsed.titles)) {
-      const fallback = raw
-        .split(/\r?\n/)
-        .map((s) => s.replace(/^[0-9\.\-\)\s]+/, "").trim())
-        .filter(Boolean)
-        .slice(0, 5);
-      return res.json({ titles: fallback });
+      return res.json({
+        titles: ["生成に失敗しました", "キーワードを変えて再実行してください"]
+      });
     }
 
     res.json({ titles: parsed.titles.slice(0, 5) });
@@ -121,49 +132,43 @@ app.post("/api/generate-titles", async (req, res) => {
   }
 });
 
-// ------------------------------------------------------
-// 記事生成 API（Claude Sonnet 4）
-// ------------------------------------------------------
+// ==================================================
+//  記事生成 API（Claude Sonnet 4）
+// ==================================================
 app.post("/api/generate-article", async (req, res) => {
   try {
     const { title, keyword } = req.body;
     if (!title?.trim()) return res.status(400).json({ error: "title is empty" });
     if (!keyword?.trim()) return res.status(400).json({ error: "keyword is empty" });
 
-    const systemPrompt = `
-あなたはSEO検定1級レベルの一流のプロライターです。
-以下のルールに従って、日本語のSEOブログ記事を生成してください。
+    const prompt = `
+あなたはSEO検定1級のプロライターです。
+以下の厳密なルールに従い、日本語でSEO最適化されたブログ記事を生成してください。
 
-【出力形式（必須）】
-JSON のみを返す。
-余計な説明文は絶対に禁止。
+【絶対出力形式】
+JSON のみ。余計な説明禁止。
 
 {
   "html": "<h1>...</h1>...",
   "text": "## H2: ...\n本文..."
 }
-
 【構成ルール】
-1) H1 は指定タイトルを使用。
-2) H2 を5個以上、キーワードや類義語を自然に含める。
-3) 各H2 の下に H3 を3個以上。
-4) 各H3 本文は300文字以上。
+1) <h1> にタイトル（指定されたもの）をそのまま使用。
+2) H2 を5つ以上。キーワードまたは類義語を自然に含める。
+3) 各H2 の下に H3 を3つ以上。
+4) H3 各本文は300文字以上。
 5) 導入文は500文字以上。
-6) 記事全体は4500文字以上。
-7) 1文ごとに改行する。
-8) 語尾の連続「です。」「です。」は禁止。
-9) 語尾バリエーションを自然に使用（〜ですよ、〜なんですね、〜といえるでしょう等）。
-10) 主語の連続も禁止し、人間が書いたように読者に語り掛けるような優しく自然で読みやすい文体にする。
-11) <h2><h3> の上下に1行改行を必ず入れる。
-12) 最後に H2「まとめ」を必ず用意しキーワードは絶対に含めて500文字以上。
-13) HTML と text の内容は同一にする。
+6) 記事全体は4000〜7000文字。
+7) 語尾連続禁止（です。です。→禁止）
+8) 主語連続禁止（〜は、〜は →禁止）
+9) 読者に語るような優しい口調（〜ですよ、〜なんです、〜といえます）
+10) <h2> と <h3> の上下には必ず1行の改行。
+11) **最後に必ず H2「まとめ」を作成し、500文字以上で締めること。**
+12) 必ず JSON が閉じた状態で終わること（} で確実に終了する）
 
-【注意】
-- JSON 以外の出力は禁止。
+指定タイトル：${title}
+キーワード：${keyword}
 `;
-
-    const userPrompt = `タイトル: ${title}
-キーワード: ${keyword}`;
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -175,24 +180,29 @@ JSON のみを返す。
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
         max_tokens: 8000,
-        temperature: 0.6,
+        temperature: 0.65,
         messages: [
-          { role: "user", content: systemPrompt + "\n" + userPrompt }
+          { role: "user", content: prompt }
         ]
       }),
     });
 
     const apiData = await response.json();
     const raw = apiData?.content?.[0]?.text || "";
+
     const parsed = extractJSONFromText(raw);
 
+    // JSON抽出に失敗 → 空値を絶対に返さない（コピー不具合対策）
     if (!parsed) {
-      return res.json({ html: "", text: raw });
+      return res.json({
+        html: "<p>生成に失敗しました（JSON解析エラー）</p>",
+        text: "生成に失敗しました（JSON解析エラー）"
+      });
     }
 
     res.json({
-      html: parsed.html || "",
-      text: parsed.text || ""
+      html: parsed.html || "<p>HTML生成に失敗しました</p>",
+      text: parsed.text || "テキスト生成に失敗しました"
     });
 
   } catch (err) {
@@ -201,5 +211,8 @@ JSON のみを返す。
   }
 });
 
+// 起動
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+app.listen(PORT, () =>
+  console.log(`Server running on port ${PORT}`)
+);
