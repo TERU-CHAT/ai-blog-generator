@@ -146,7 +146,7 @@ app.post("/api/generate-article", async (req, res) => {
 - 同じ語尾の連続使用禁止
 - 主語の連続使用禁止
 - 語りかけるような優しい口調（例、～ですよね。～なんですよ。～ますよ。～できますよ。体言止め。等を織り交ぜる）
-- 1文ごとに必ず改行を入れること
+- 1文ごとに必ず改行を入れて読みやすくする
 - JSON以外の文章は絶対禁止
 
 タイトル：${title}
@@ -162,7 +162,7 @@ app.post("/api/generate-article", async (req, res) => {
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
-        max_tokens: 10000,
+        max_tokens: 11000,
         temperature: 0.65,
         messages: [{ role: "user", content: prompt }],
       }),
