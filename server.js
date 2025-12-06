@@ -111,17 +111,17 @@ function formatTextWithLineBreaks(text) {
 }
 
 // --------------------------------------------------
-// 新機能: HTMLにも改行を適用
+// 新機能: HTMLにも改行を適用(ダブル改行で読みやすく)
 // --------------------------------------------------
 function formatHTMLWithLineBreaks(html) {
   if (!html) return "";
   
-  // pタグ、liタグ内のテキストを1文ごとに<br>で区切る
+  // pタグ、liタグ内のテキストを1文ごとに<br><br>で区切る
   let formatted = html.replace(/>([^<]+)</g, (match, text) => {
     // タグに囲まれたテキスト部分のみ処理
     if (text.trim()) {
-      let formattedText = text.replace(/([^0-9])。(?!\s*<)/g, "$1。<br>");
-      formattedText = formattedText.replace(/([？！])(?!\s*<)/g, "$1<br>");
+      let formattedText = text.replace(/([^0-9])。(?!\s*<)/g, "$1。<br><br>");
+      formattedText = formattedText.replace(/([？！])(?!\s*<)/g, "$1<br><br>");
       return `>${formattedText}<`;
     }
     return match;
@@ -179,7 +179,7 @@ app.post("/api/generate-titles", async (req, res) => {
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
-        max_tokens: 1000,
+        max_tokens: 2000,
         temperature: 0.8,
         messages: [{ role: "user", content: prompt }],
       }),
