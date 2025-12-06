@@ -62,7 +62,7 @@ btnGenerateArticle.addEventListener("click", async () => {
   if (!keyword) return alert("キーワードを入力してください");
 
   btnGenerateArticle.disabled = true;
-  btnGenerateArticle.textContent = "生成中...（数秒〜数十秒かかります）";
+  btnGenerateArticle.textContent = "生成中...（数十秒かかります）";
 
   try {
     const res = await fetch("/api/generate-article", {
