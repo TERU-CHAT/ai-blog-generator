@@ -93,25 +93,7 @@ function extractLargestJSON(text) {
 }
 
 // --------------------------------------------------
-// 新機能: 1文ごとに改行を追加
-// --------------------------------------------------
-function formatTextWithLineBreaks(text) {
-  if (!text) return "";
-  
-  // 句点（。）の後に改行を追加（ただし、数字の後の。は除外）
-  let formatted = text.replace(/([^0-9])。/g, "$1。\n");
-  
-  // 疑問符・感嘆符の後も改行
-  formatted = formatted.replace(/([？！])/g, "$1\n");
-  
-  // 連続する改行を2つまでに制限
-  formatted = formatted.replace(/\n{3,}/g, "\n\n");
-  
-  return formatted.trim();
-}
-
-// --------------------------------------------------
-// 新機能: HTMLにも改行を適用(ダブル改行で読みやすく)
+// HTMLに改行を適用（ダブル改行で読みやすく）
 // --------------------------------------------------
 function formatHTMLWithLineBreaks(html) {
   if (!html) return "";
@@ -131,7 +113,7 @@ function formatHTMLWithLineBreaks(html) {
 }
 
 // ==================================================
-// タイトル生成 API (改善版)
+// タイトル生成 API（最大1000トークン）
 // ==================================================
 app.post("/api/generate-titles", async (req, res) => {
   try {
@@ -179,7 +161,7 @@ app.post("/api/generate-titles", async (req, res) => {
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
-        max_tokens: 2000,
+        max_tokens: 1000,
         temperature: 0.8,
         messages: [{ role: "user", content: prompt }],
       }),
@@ -233,7 +215,7 @@ app.post("/api/generate-titles", async (req, res) => {
 });
 
 // ==================================================
-// 記事生成 API (改善版 + 改行機能追加)
+// 記事生成 API（E-A-T対応・HTML形式のみ・最大10000トークン）
 // ==================================================
 app.post("/api/generate-article", async (req, res) => {
   try {
@@ -247,41 +229,84 @@ app.post("/api/generate-article", async (req, res) => {
       return res.status(400).json({ error: "キーワードを入力してください" });
     }
 
-    console.log(`📝 記事生成開始: ${title}`);
+    console.log(`📝 記事生成開始（E-A-T対応）: ${title}`);
 
-    const prompt = `あなたは超一流のSEOライターです。以下の条件で記事を生成してください。
+    const prompt = `あなたは専門性の高いプロのSEOライターです。Google検索で上位表示されるために、E-A-T（専門性・権威性・信頼性）を重視した高品質な記事を生成してください。
 
-【最重要】以下のJSON形式のみで回答してください。JSONの前後に説明文を含めないでください。
+【重要】以下のJSON形式のみで回答してください。JSONの前後に説明文を含めないでください。
 
 {
-  "html": "HTMLコンテンツ全体",
-  "text": "プレーンテキスト全体"
+  "html": "HTMLコンテンツ全体"
 }
 
 タイトル: ${title}
 キーワード: ${keyword}
 
-【必須条件】
-1. 導入文: 500文字以上で読者の興味を引く
-2. H2見出し: 5つ以上（最後は必ず「まとめ」）
-3. H3見出し: 各H2配下に3つ以上
-4. 各セクション本文: 300文字以上
-5. 記事全体: 4000〜7000文字
-6. 語尾の連続禁止（です・ます・でしょう等を交互に）
-7. 主語の連続禁止
-8. 親しみやすい語りかけ口調
-9. まとめセクション: 500文字以上で記事全体を総括
+【E-A-T（専門性・権威性・信頼性）の実装方法】
 
-【HTMLフォーマット】
-- h1タグでタイトル
-- h2、h3タグで見出し構造
-- pタグで段落
-- ulタグで箇条書き（必要に応じて）
+1. Expertise（専門性）の表現
+   - 専門用語を正確に使用し、初心者にもわかりやすく解説
+   - 具体的な数値、データ、統計を積極的に活用
+   - 業界の最新トレンドや実践的な知識を盛り込む
+   - 「〜という研究結果があります」「専門家によると」などの表現を使用
 
-【textフォーマット】
-- ## H2見出し
-- ### H3見出し
-- 本文は通常のテキスト`;
+2. Authoritativeness（権威性）の表現
+   - 情報源を明示する表現（「〇〇省のデータによると」「業界団体の調査では」）
+   - 専門家の見解や公式見解を引用する形式
+   - 実例・事例を具体的に紹介
+   - 段階的・体系的な説明で信頼感を構築
+
+3. Trustworthiness（信頼性）の表現
+   - メリットだけでなくデメリットや注意点も公平に記載
+   - 「〜には個人差があります」など誠実な表現
+   - 最新情報であることを示唆（「2024年現在」「最新の」など）
+   - 読者に誤解を与えない正確で慎重な表現
+
+【記事構成の必須条件】
+- 導入文: 400文字以上（読者の課題に共感し、記事の価値を提示）
+- H2見出し: 4〜5つ（最後は必ず「まとめ」）
+- 各H2セクション: 300〜500文字
+- 「まとめ」セクション: 400文字以上（記事全体を総括し、次のアクションを提示）
+- 記事全体: 3000〜4500文字
+
+【語尾のバリエーション】
+読者に語りかけるような自然で親しみやすい文章：
+- 「〜ですよね」「〜なんですよ」「〜ですよ」
+- 「〜できますよ」「〜してみてください」「〜してみましょう」
+- 「〜でしょう」「〜かもしれません」
+- 体言止め（適度に使用）
+
+※同じ語尾を3回以上連続させないこと
+
+【HTML構造】
+<h1>${title}</h1>
+
+<div class="introduction">
+  <p>導入文...</p>
+</div>
+
+<section>
+  <h2>見出し1</h2>
+  <p>本文...</p>
+</section>
+
+<section>
+  <h2>見出し2</h2>
+  <p>本文...</p>
+</section>
+
+...
+
+<section class="summary">
+  <h2>まとめ</h2>
+  <p>総括...</p>
+</section>
+
+【絶対厳守】
+- JSON形式以外の出力は一切禁止
+- HTMLタグは正しく閉じる
+- 専門性と信頼性を重視した内容
+- 読者にとって実用的で価値ある情報を提供`;
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -292,8 +317,8 @@ app.post("/api/generate-article", async (req, res) => {
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
-        max_tokens: 12000,
-        temperature: 0.7,
+        max_tokens: 10000,
+        temperature: 0.65,
         messages: [{ role: "user", content: prompt }],
       }),
     });
@@ -310,30 +335,57 @@ app.post("/api/generate-article", async (req, res) => {
     const apiData = await response.json();
     const raw = apiData?.content?.[0]?.text || "";
     
-    console.log("📥 Claude Response Length:", raw.length);
-    console.log("📥 First 300 chars:", raw.substring(0, 300));
+    console.log("==========================================");
+    console.log("📥 Claude API レスポンス:");
+    console.log("==========================================");
+    console.log("Response Length:", raw.length, "文字");
+    console.log("First 500 chars:");
+    console.log(raw.substring(0, 500));
+    console.log("==========================================");
 
     const parsed = extractLargestJSON(raw);
+    
+    console.log("🔍 JSON解析結果:");
+    console.log("Parsed:", parsed ? "成功" : "失敗");
+    if (parsed) {
+      console.log("HTML exists:", !!parsed.html);
+      console.log("HTML length:", parsed.html?.length || 0, "文字");
+    }
 
-    if (!parsed || !parsed.html || !parsed.text) {
-      console.error("❌ JSON解析失敗");
-      console.error("Raw response:", raw.substring(0, 500));
+    if (!parsed || !parsed.html) {
+      console.error("==========================================");
+      console.error("❌ JSON解析失敗の詳細");
+      console.error("==========================================");
+      console.error("Parsed object:", JSON.stringify(parsed, null, 2));
+      console.error("Raw response (first 1000 chars):", raw.substring(0, 1000));
+      console.error("==========================================");
       
       return res.json({
-        html: "<div class='error'><h2>⚠️ 生成に失敗しました</h2><p>もう一度お試しください。それでも失敗する場合は、タイトルやキーワードを変更してみてください。</p></div>",
-        text: "生成に失敗しました。もう一度お試しください。",
+        html: `<div class='error'>
+          <h2>⚠️ 生成に失敗しました</h2>
+          <p>もう一度お試しください。それでも失敗する場合は、タイトルやキーワードを変更してみてください。</p>
+          <details>
+            <summary>デバッグ情報</summary>
+            <pre>${raw.substring(0, 500)}</pre>
+          </details>
+        </div>`,
+        text: "",
+        debug: {
+          rawLength: raw.length,
+          rawPreview: raw.substring(0, 500),
+          parsedKeys: parsed ? Object.keys(parsed) : []
+        }
       });
     }
 
-    // 1文ごとに改行を追加
+    // 1文ごとに改行を追加（ダブル改行）
     const formattedHTML = formatHTMLWithLineBreaks(parsed.html);
-    const formattedText = formatTextWithLineBreaks(parsed.text);
 
-    console.log(`✅ 記事生成成功 - HTML: ${formattedHTML.length}文字, Text: ${formattedText.length}文字`);
+    console.log(`✅ 記事生成成功（E-A-T対応）- HTML: ${formattedHTML.length}文字`);
 
     res.json({
       html: formattedHTML,
-      text: formattedText,
+      text: "" // テキスト形式は不要なので空文字
     });
 
   } catch (err) {
@@ -350,7 +402,13 @@ app.get("/api/health", (req, res) => {
   res.json({ 
     status: "ok", 
     apiKeyConfigured: !!CLAUDE_API_KEY,
-    timestamp: new Date().toISOString()
+    timestamp: new Date().toISOString(),
+    config: {
+      titleMaxTokens: 1000,
+      articleMaxTokens: 10000,
+      eatOptimized: true,
+      outputFormat: "HTML only"
+    }
   });
 });
 
@@ -359,4 +417,7 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`🔑 API Key configured: ${!!CLAUDE_API_KEY}`);
+  console.log(`📊 Config: Title=1000tokens, Article=10000tokens`);
+  console.log(`🎯 E-A-T最適化: 有効`);
+  console.log(`📝 出力形式: HTML形式のみ`);
 });
