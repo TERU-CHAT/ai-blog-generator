@@ -73,6 +73,7 @@ input[type="text"], input, textarea, select{
   border:none;
   font-weight:600;
   cursor:pointer;
+  transition: all 0.2s ease;
 }
 .btn.primary{
   background:linear-gradient(90deg,var(--blue1),var(--blue2));
@@ -90,6 +91,17 @@ input[type="text"], input, textarea, select{
 }
 .btn.small{padding:8px 10px;font-size:13px}
 
+.btn:hover{
+  transform: translateY(-2px);
+  box-shadow:0 10px 28px rgba(14,78,168,0.2);
+}
+
+.btn:disabled{
+  opacity:0.6;
+  cursor:not-allowed;
+  transform:none;
+}
+
 /* titles grid */
 .titles-grid{
   display:grid;
@@ -100,7 +112,7 @@ input[type="text"], input, textarea, select{
 .title-card{
   padding:12px;
   border-radius:10px;
-  background:linear-gradient(180deg,#e9f1ff,#dff0ff); /* 青系背景 */
+  background:linear-gradient(180deg,#e9f1ff,#dff0ff);
   cursor:pointer;
   border:1px solid rgba(11,102,255,0.12);
   transition:transform .08s ease, box-shadow .12s ease;
@@ -115,21 +127,33 @@ input[type="text"], input, textarea, select{
   padding:18px;
   border-radius:10px;
   min-height:200px;
+  line-height:1.8;
 }
 .article-preview h1{color:var(--blue1);margin:0 0 12px 0}
-.article-preview h2{color:#0b3b66;margin-top:16px}
-.article-preview h3{color:#0b3b66;margin-top:10px}
-.article-preview p{margin:8px 0;line-height:1.7}
+.article-preview h2{color:#0b3b66;margin-top:24px;margin-bottom:12px;font-size:20px}
+.article-preview h3{color:#0b3b66;margin-top:16px;margin-bottom:8px;font-size:17px}
+.article-preview p{margin:8px 0;line-height:1.8}
 
-#articleText{
-  width:100%;
-  margin-top:10px;
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", "Helvetica Neue", monospace;
-  background:#fbfdff;
-  border:1px solid #d8eafc;
-  border-radius:8px;
-  padding:12px;
+/* ローディングスピナー */
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  margin: 0 auto;
+  border: 4px solid #e7f1ff;
+  border-top: 4px solid var(--blue1);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 /* note */
-.note{color:var(--muted);font-size:13px;margin-top:8px}
+.note{
+  color:var(--muted);
+  font-size:13px;
+  margin-top:8px;
+  font-weight:500;
+}
