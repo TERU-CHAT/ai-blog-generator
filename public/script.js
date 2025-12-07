@@ -4,9 +4,8 @@ const titlesContainer = document.getElementById("titles");
 const selectedTitleInput = document.getElementById("selectedTitle");
 const btnGenerateArticle = document.getElementById("btn-generate-article");
 const articlePreview = document.getElementById("articlePreview"); // 非表示のHTML格納
-const articleTextArea = document.getElementById("articleText");   // 表示用テキスト
+const articleDisplay = document.getElementById("articleDisplay");   // 表示用エリア
 const btnCopyHTML = document.getElementById("btn-copy-html");
-const btnCopyText = document.getElementById("btn-copy-text");
 const keywordInput = document.getElementById("keyword");
 
 // -------------------------------
@@ -62,7 +61,18 @@ btnGenerateArticle.addEventListener("click", async () => {
   if (!keyword) return alert("キーワードを入力してください");
 
   btnGenerateArticle.disabled = true;
-  btnGenerateArticle.textContent = "生成中...（数十秒かかります）";
+  btnGenerateArticle.textContent = "生成中...（2〜3分程度お待ちください）";
+  
+  // 生成中メッセージを表示
+  articleDisplay.innerHTML = `
+    <div style="text-align:center;padding:40px;">
+      <p style="font-size:18px;color:#0b66ff;margin-bottom:10px;">🔄 記事を生成しています...</p>
+      <p style="color:#6b7c93;">2〜3分程度かかります。このままお待ちください。</p>
+      <div style="margin-top:20px;">
+        <div class="loading-spinner"></div>
+      </div>
+    </div>
+  `;
 
   try {
     const res = await fetch("/api/generate-article", {
@@ -72,29 +82,27 @@ btnGenerateArticle.addEventListener("click", async () => {
     });
 
     if (!res.ok) {
-      articleTextArea.value = "生成に失敗しました。";
+      articleDisplay.innerHTML = "<p style='color:red;'>生成に失敗しました。もう一度お試しください。</p>";
       return;
     }
 
     const data = await res.json();
 
-    // ▼ HTML（非表示領域へ保存）
+    // HTML形式のデータを保存（非表示領域）
     articlePreview.innerHTML = data.html || "";
+    
+    // HTML形式のデータを表示領域にも表示
+    articleDisplay.innerHTML = data.html || "<p>生成に失敗しました</p>";
 
-    // ▼ テキスト（画面表示）
-    if (data.text && data.text.trim()) {
-      articleTextArea.value = data.text;
-    } else {
-      articleTextArea.value = stripHtml(data.html || "");
-    }
-
-    // ▼ コピー用データを保持
+    // コピー用データを保持
     btnCopyHTML.dataset.html = data.html || "";
-    btnCopyText.dataset.text = data.text || articleTextArea.value || "";
+
+    // 成功メッセージを一時表示
+    showSuccessMessage();
 
   } catch (e) {
     console.error("記事生成エラー:", e);
-    articleTextArea.value = "生成に失敗しました。";
+    articleDisplay.innerHTML = "<p style='color:red;'>生成に失敗しました。もう一度お試しください。</p>";
   } finally {
     btnGenerateArticle.disabled = false;
     btnGenerateArticle.textContent = "ブログ本文を生成";
@@ -102,26 +110,41 @@ btnGenerateArticle.addEventListener("click", async () => {
 });
 
 // -------------------------------
-// コピー機能
+// 成功メッセージ表示
+// -------------------------------
+function showSuccessMessage() {
+  const msg = document.createElement("div");
+  msg.style.cssText = "position:fixed;top:20px;right:20px;background:#10b981;color:white;padding:16px 24px;border-radius:8px;box-shadow:0 4px 12px rgba(0,0,0,0.15);z-index:1000;font-weight:600;";
+  msg.textContent = "✅ 記事の生成が完了しました！";
+  document.body.appendChild(msg);
+  setTimeout(() => msg.remove(), 3000);
+}
+
+// -------------------------------
+// HTMLコピー機能
 // -------------------------------
 btnCopyHTML.addEventListener("click", async () => {
   const html = btnCopyHTML.dataset.html || "";
   if (!html) return alert("HTMLがありません。記事を生成してください。");
-  await navigator.clipboard.writeText(html);
-  alert("HTMLをコピーしました");
+  
+  try {
+    await navigator.clipboard.writeText(html);
+    
+    // コピー成功のフィードバック
+    const originalText = btnCopyHTML.textContent;
+    btnCopyHTML.textContent = "✅ コピーしました！";
+    btnCopyHTML.style.background = "#10b981";
+    btnCopyHTML.style.color = "white";
+    btnCopyHTML.style.border = "none";
+    
+    setTimeout(() => {
+      btnCopyHTML.textContent = originalText;
+      btnCopyHTML.style.background = "";
+      btnCopyHTML.style.color = "";
+      btnCopyHTML.style.border = "";
+    }, 2000);
+    
+  } catch (e) {
+    alert("コピーに失敗しました: " + e.message);
+  }
 });
-
-btnCopyText.addEventListener("click", async () => {
-  const txt = btnCopyText.dataset.text || "";
-  if (!txt) return alert("テキストがありません。記事を生成してください。");
-  await navigator.clipboard.writeText(txt);
-  alert("テキストをコピーしました");
-});
-
-// -------------------------------
-// HTML → TEXT（簡易）
-function stripHtml(html) {
-  const tmp = document.createElement("div");
-  tmp.innerHTML = html;
-  return tmp.innerText;
-}
