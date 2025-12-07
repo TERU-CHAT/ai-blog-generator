@@ -264,10 +264,11 @@ app.post("/api/generate-article", async (req, res) => {
 
 【記事構成の必須条件】
 - 導入文: 400文字以上（読者の課題に共感し、記事の価値を提示）
-- H2見出し: 4〜5つ（最後は必ず「まとめ」）
-- 各H2セクション: 300〜500文字
+- H2見出し: 4つ以上（最後は必ず「まとめ」）
+- H3見出し: 各H2配下に3つ以上必須
+- 各H3本文: 300文字以上（重要：これは必ず守ること）
 - 「まとめ」セクション: 400文字以上（記事全体を総括し、次のアクションを提示）
-- 記事全体: 3000〜4500文字
+- 記事全体: 5000〜7000文字
 
 【語尾のバリエーション】
 読者に語りかけるような自然で親しみやすい文章：
@@ -282,31 +283,82 @@ app.post("/api/generate-article", async (req, res) => {
 <h1>${title}</h1>
 
 <div class="introduction">
-  <p>導入文...</p>
+  <p>導入文（400文字以上）...</p>
 </div>
 
 <section>
   <h2>見出し1</h2>
-  <p>本文...</p>
+  
+  <div>
+    <h3>見出し1-1</h3>
+    <p>本文（300文字以上）...</p>
+  </div>
+  
+  <div>
+    <h3>見出し1-2</h3>
+    <p>本文（300文字以上）...</p>
+  </div>
+  
+  <div>
+    <h3>見出し1-3</h3>
+    <p>本文（300文字以上）...</p>
+  </div>
 </section>
 
 <section>
   <h2>見出し2</h2>
-  <p>本文...</p>
+  
+  <div>
+    <h3>見出し2-1</h3>
+    <p>本文（300文字以上）...</p>
+  </div>
+  
+  <div>
+    <h3>見出し2-2</h3>
+    <p>本文（300文字以上）...</p>
+  </div>
+  
+  <div>
+    <h3>見出し2-3</h3>
+    <p>本文（300文字以上）...</p>
+  </div>
 </section>
 
-...
+<section>
+  <h2>見出し3</h2>
+  （各H2配下に必ずH3を3つ以上配置）
+</section>
+
+<section>
+  <h2>見出し4</h2>
+  （各H2配下に必ずH3を3つ以上配置）
+</section>
 
 <section class="summary">
   <h2>まとめ</h2>
-  <p>総括...</p>
+  <p>総括（400文字以上）...</p>
 </section>
+
+【構造の重要ポイント】
+1. H2は必ず4つ以上作成（最後の1つは「まとめ」）
+2. 各H2の配下には必ずH3を3つ以上配置
+3. 各H3の本文は必ず300文字以上
+4. 「まとめ」セクションにはH3は不要
 
 【絶対厳守】
 - JSON形式以外の出力は一切禁止
 - HTMLタグは正しく閉じる
+- H2は4つ以上必須（最後は「まとめ」）
+- 各H2配下に必ずH3を3つ以上配置
+- 各H3の本文は300文字以上必須
 - 専門性と信頼性を重視した内容
-- 読者にとって実用的で価値ある情報を提供`;
+- 読者にとって実用的で価値ある情報を提供
+
+【記事のボリューム確認】
+- 導入: 400文字
+- H2（4つ） × H3（各3つ） × 本文（各300文字） = 3600文字
+- まとめ: 400文字
+- 合計: 約4000〜7000文字の充実した記事を作成`;
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -317,7 +369,7 @@ app.post("/api/generate-article", async (req, res) => {
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
-        max_tokens: 10000,
+        max_tokens: 12000,
         temperature: 0.65,
         messages: [{ role: "user", content: prompt }],
       }),
@@ -405,9 +457,14 @@ app.get("/api/health", (req, res) => {
     timestamp: new Date().toISOString(),
     config: {
       titleMaxTokens: 1000,
-      articleMaxTokens: 10000,
+      articleMaxTokens: 12000,
       eatOptimized: true,
-      outputFormat: "HTML only"
+      outputFormat: "HTML only",
+      structure: {
+        h2: "4つ以上",
+        h3PerH2: "3つ以上",
+        h3MinChars: "300文字以上"
+      }
     }
   });
 });
@@ -417,7 +474,8 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`🔑 API Key configured: ${!!CLAUDE_API_KEY}`);
-  console.log(`📊 Config: Title=1000tokens, Article=10000tokens`);
+  console.log(`📊 Config: Title=1000tokens, Article=12000tokens`);
   console.log(`🎯 E-A-T最適化: 有効`);
   console.log(`📝 出力形式: HTML形式のみ`);
+  console.log(`📐 記事構造: H2(4+) > H3(3+/H2) > 本文(300+文字/H3)`);
 });
