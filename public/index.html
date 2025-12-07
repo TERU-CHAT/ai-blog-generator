@@ -41,21 +41,21 @@
           <button id="btn-generate-article" class="btn accent">ブログ本文を生成</button>
           <div class="spacer"></div>
           <button id="btn-copy-html" class="btn outline small">HTMLをコピー</button>
-          <button id="btn-copy-text" class="btn outline small">テキストをコピー</button>
         </div>
-        <p class="note">記事生成には、数十秒かかります。</p>
+        <p class="note">記事生成には2〜3分程度かかります。</p>
       </section>
 
-      <!-- HTMLプレビュー（UIから完全非表示 / コピー用に保持） -->
+      <!-- HTMLプレビュー（非表示でHTML保持） -->
       <section class="panel result-panel" style="display:none;">
-        <h2 class="panel-title">生成結果（HTMLプレビュー 非表示）</h2>
         <div id="articlePreview" class="article-preview"></div>
       </section>
 
-      <!-- テキストプレビュー（表示） -->
+      <!-- 生成結果プレビュー -->
       <section class="panel result-panel">
-        <h2 class="panel-title">生成テキスト（本文）</h2>
-        <textarea id="articleText" rows="24"></textarea>
+        <h2 class="panel-title">生成結果プレビュー</h2>
+        <div id="articleDisplay" class="article-preview">
+          <p style="color:#6b7c93;">記事を生成するとここに表示されます</p>
+        </div>
       </section>
 
     </main>
