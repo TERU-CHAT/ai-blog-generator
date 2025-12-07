@@ -179,7 +179,7 @@ app.post("/api/generate-titles", async (req, res) => {
       },
       body: JSON.stringify({
         model: "claude-sonnet-4-20250514",
-        max_tokens: 1000,
+        max_tokens: 2000,
         temperature: 0.8,
         messages: [{ role: "user", content: prompt }],
       }),
@@ -310,41 +310,18 @@ app.post("/api/generate-article", async (req, res) => {
     const apiData = await response.json();
     const raw = apiData?.content?.[0]?.text || "";
     
-    console.log("==========================================");
-    console.log("📥 Claude API 完全レスポンス:");
-    console.log("==========================================");
-    console.log("Response Length:", raw.length);
-    console.log("Full Response:");
-    console.log(raw);
-    console.log("==========================================");
+    console.log("📥 Claude Response Length:", raw.length);
+    console.log("📥 First 300 chars:", raw.substring(0, 300));
 
     const parsed = extractLargestJSON(raw);
-    
-    console.log("🔍 JSON解析結果:");
-    console.log("Parsed:", parsed ? "成功" : "失敗");
-    if (parsed) {
-      console.log("HTML exists:", !!parsed.html);
-      console.log("Text exists:", !!parsed.text);
-      console.log("HTML length:", parsed.html?.length || 0);
-      console.log("Text length:", parsed.text?.length || 0);
-    }
 
     if (!parsed || !parsed.html || !parsed.text) {
-      console.error("==========================================");
-      console.error("❌ JSON解析失敗の詳細");
-      console.error("==========================================");
-      console.error("Parsed object:", JSON.stringify(parsed, null, 2));
-      console.error("Raw response (first 1000 chars):", raw.substring(0, 1000));
-      console.error("==========================================");
+      console.error("❌ JSON解析失敗");
+      console.error("Raw response:", raw.substring(0, 500));
       
       return res.json({
         html: "<div class='error'><h2>⚠️ 生成に失敗しました</h2><p>もう一度お試しください。それでも失敗する場合は、タイトルやキーワードを変更してみてください。</p></div>",
         text: "生成に失敗しました。もう一度お試しください。",
-        debug: {
-          rawLength: raw.length,
-          rawPreview: raw.substring(0, 500),
-          parsedKeys: parsed ? Object.keys(parsed) : []
-        }
       });
     }
 
